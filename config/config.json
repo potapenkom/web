@@ -1,0 +1,20 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "secafi-indicateurs-etcc-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/secafiIndicateursEtcc/SecafiIndicateursEtccWebPart.js",
+          "manifest": "./src/webparts/secafiIndicateursEtcc/SecafiIndicateursEtccWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "SecafiIndicateursEtccWebPartStrings": "lib/webparts/secafiIndicateursEtcc/loc/{locale}.js",
+    "PropertyControlStrings": "node_modules/@pnp/spfx-property-controls/lib/loc/{locale}.js",
+    "ControlStrings": "node_modules/@pnp/spfx-controls-react/lib/loc/{locale}.js"
+  }
+}
