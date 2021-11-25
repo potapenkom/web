@@ -17,57 +17,49 @@ export interface ISecafiIndicateursEtccWebPartProps {
   collectionData: any[];
 }
 
-/*export function getSearchresults(cType: string, fieldName: string, sDate:Date, eDate:Date): Promise<any> {
-  console.log('fieldName',fieldName)
-  console.log('sDate',sDate)
-  console.log('eDate',eDate)
-  return new Promise((resolve, reject) => {
+export interface ISearchResult {
+  listName: string;
+  fieldName: string;
+  SPWebUrl: string;
+  fieldValue: string;
+}
 
-    let searchQuerySuivi : SearchQuery = {
-      SelectProperties: [`${fieldName}`, 'Created', "SPWebUrl"],
-    }
+export interface ISearchBilan extends ISearchResult {
+  DDerniereReunion: Date;
+}
 
-    let searchQueryBilan : SearchQuery = {
-      SelectProperties: [`${fieldName}`, 'DDerniereReunion','SPWebUrl'],
-     // RefinementFilters: [`DDerniereReunion:'range(2021-01-01, 2021-12-31)'`]
-    }
+export interface ISearchSuivi extends ISearchResult {
+  DCreation: Date
+}
 
-    let searchQueryMissions: SearchQuery = {
-      SelectProperties: ['Année', 'Produit', 'NumMission0', 'Equipe', 'Client', 'Sortie', 'SPWebUrl'],
-    }
-    let q;
-    switch (cType) {
-      case "Bilan_de_mission":
-         q = SearchQueryBuilder.create(`ContentType:"${cType}"`, searchQueryBilan);
-          break;
-      case "Suivi_de_relecture_par_relecteur":
-         q = SearchQueryBuilder.create(`ContentType:"${cType}"`, searchQuerySuivi);
-          break;
-      case "0x010030F4365A045058449B6D5A1086834EB3007DA7964A5C6CE1479A322590C25A1CA5":
-        q = SearchQueryBuilder.create(`ContentTypeID:"${cType}"`, searchQueryMissions);
-        break;
-      default:
-          console.log("No exists!");
-          break;
-  } 
-  pnp.sp.search(q).then((r: SearchResults) => {
-    resolve(r.PrimarySearchResults);
-  })
-    .catch((ex) => {
-      console.error(ex);
-      reject(ex);
-    });
-  });
-}*/
+export interface ISearchMissions extends ISearchResult {
+  Sortie: Date;
+  Annee: string;
+  Produit: string;
+  NumMission: string;
+  Equipe: string;
+  Client: string;
+}
 
-export function getBilan(cType: string, fieldName:string, dStart:string, dEnd:string): Promise<any> {
+
+export function getBilan(cType: string, dStart: string, dEnd: string, fieldName?: string): Promise<any> {
+  const _results: ISearchBilan[] = [];
   return new Promise((resolve, reject) => {
     pnp.sp.search(<SearchQuery>{
       Querytext: `ContentType:"${cType}"`,
-      SelectProperties: [`${fieldName}`, 'DDerniereReunion', 'SPWebUrl'],
-      RefinementFilters: [`DDerniereReunion:range(${dStart}, ${dEnd})`]
+      SelectProperties: ['DDerniereReunion', 'SPWebUrl', `${fieldName}`],
+      RefinementFilters: [`DDerniereReunion:range(${dStart},${dEnd})`]
     }).then((r: SearchResults) => {
-      resolve(r.PrimarySearchResults);
+      r.PrimarySearchResults.forEach(result => {
+        _results.push({
+          fieldValue: result[`${fieldName}`],
+          DDerniereReunion: result['DDerniereReunion'],
+          SPWebUrl: result['SPWebUrl'],
+          listName: `${cType}`,
+          fieldName: `${fieldName}`
+        });
+      })
+      resolve(_results);
     })
       .catch((ex) => {
         console.error(ex);
@@ -76,14 +68,55 @@ export function getBilan(cType: string, fieldName:string, dStart:string, dEnd:st
   });
 }
 
-export function getSuiviRelecture(cType: string, fieldName:string, dStart:string, dEnd:string): Promise<any> {
+export function getSuiviRelecture(cType: string, fieldName: string, dStart: string, dEnd: string): Promise<any> {
+  const _results: ISearchSuivi[] = [];
   return new Promise((resolve, reject) => {
     pnp.sp.search(<SearchQuery>{
       Querytext: `ContentType:"${cType}"`,
-      SelectProperties: [`${fieldName}`, 'DDerniereReunion', 'SPWebUrl'],
-      RefinementFilters: [`DDerniereReunion:range(${dStart}, ${dEnd})`]
+      SelectProperties: [`${fieldName}`, 'Created', 'SPWebUrl'],
+      RefinementFilters: [`Created:range(${dStart}, ${dEnd})`]
     }).then((r: SearchResults) => {
-      resolve(r.PrimarySearchResults);
+      r.PrimarySearchResults.forEach(result => {
+        _results.push({
+          fieldValue: result[`${fieldName}`],
+          DCreation: result['Created'],
+          SPWebUrl: result['SPWebUrl'],
+          listName: `${cType}`,
+          fieldName: `${fieldName}`
+        });
+      })
+      resolve(_results);
+    })
+      .catch((ex) => {
+        console.error(ex);
+        reject(ex);
+      });
+  });
+}
+
+export function getMissions(cType: string, fieldName: string, dStart: string, dEnd: string): Promise<any> {
+  const _results: ISearchMissions[] = [];
+  return new Promise((resolve, reject) => {
+    pnp.sp.search(<SearchQuery>{
+      Querytext: `ContentTypeID:"${cType}"`,
+      SelectProperties: ['Année', 'Produit', 'NumMission0', 'Equipe', 'Client', 'Sortie', 'SPWebUrl'],
+      RefinementFilters: [`Sortie:range(${dStart}, ${dEnd})`]
+    }).then((r: SearchResults) => {
+      r.PrimarySearchResults.forEach(result => {
+        _results.push({
+          fieldValue: result[`${fieldName}`],
+          SPWebUrl: result['SPWebUrl'],
+          listName: `${cType}`,
+          fieldName: `${fieldName}`,
+          Sortie: result['Sortie'],
+          Annee: result['Année'],
+          Produit: result['Produit'],
+          NumMission: result['NumMission0'],
+          Equipe: result['Equipe'],
+          Client: result['Client'],
+        });
+      })
+      resolve(_results);
     })
       .catch((ex) => {
         console.error(ex);

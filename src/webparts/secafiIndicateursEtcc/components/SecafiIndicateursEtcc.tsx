@@ -3,7 +3,7 @@ import styles from './SecafiIndicateursEtcc.module.scss';
 import { ISecafiIndicateursEtccProps } from './ISecafiIndicateursEtccProps';
 import { ISecafiIndicateursEtccState } from './ISecafiIndicateursEtccState';
 import { ChartControl, ChartType } from '@pnp/spfx-controls-react/lib/ChartControl';
-import { sp, IItemAddResult, DateTimeFieldFormatType } from "@pnp/sp/presets/all";
+import { sp } from "@pnp/sp/presets/all";
 import * as moment from 'moment'
 import {
   DatePicker,
@@ -11,7 +11,7 @@ import {
   Stack
 } from '@fluentui/react';
 import { DefaultButton } from '@fluentui/react/lib/Button';
-import { getBilan } from '../SecafiIndicateursEtccWebPart';
+import { getBilan, ISearchBilan, getSuiviRelecture, ISearchResult, getMissions, ISearchMissions} from '../SecafiIndicateursEtccWebPart';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
@@ -49,39 +49,117 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
   public componentDidMount(): void {
     let start = moment(this.state.startDate).format('YYYY-MM-DD');
     let end = moment(this.state.endDate).format('YYYY-MM-DD');
-
     this.props.collectionData && this.props.collectionData.map(async (val) => {
-      if(val.listId ==="Bilan_de_mission"){
-        let searchResults = await getBilan(val.listId, val.fieldId, start, end);
-        console.log('searchResults from comp did mount', searchResults)
-        let countYes = 0
-        let countNo = 0
-        searchResults.forEach(element => {
-          if (element[val.fieldId] === "true" || element[val.fieldId] === "OK") {
-            countYes += 1;
-          } else if (element[val.fieldId] === "false" || element[val.fieldId] === "AR") {
-            countNo += 1;
-          }
-        });
-        if ((countNo + countYes) > 0) {
-          let arrayItem = {
-            listId: val.listId,
-            fieldId: val.fieldId,
-            countYes: (100 * countYes) / (countYes + countNo),
-            countNo: (100 * countNo) / (countYes + countNo),
-          }
-          let { sortedResult } = this.state;
-          sortedResult.push(arrayItem);
-          this.setState({
-            sortedResult: sortedResult
-          })
-        }  
+      if (val.listId === "Bilan_de_mission") {
+        let searchResults: ISearchResult[] = await getBilan(val.listId, start, end, val.fieldId,);
+        console.log('searchResults',searchResults)
+        this.getPercent(searchResults);
+      }
+      if (val.listId === "Suivi_de_relecture_par_relecteur") {
+        let searchResults: ISearchResult[] = await getBilan('Bilan_de_mission', start, end);
+        let serchSuinvi: ISearchResult[] = await getSuiviRelecture(val.listId, val.fieldId, this.getMinMaxDate(searchResults, 'DDerniereReunion').minDate, this.getMinMaxDate(searchResults, 'DDerniereReunion').maxDate);
+        console.log('hasBlanMission',this.hasBlanMission(searchResults, serchSuinvi))
+        this.getPercent(this.hasBlanMission(searchResults, serchSuinvi));
+      }
+      if (val.listId === "0x010030F4365A045058449B6D5A1086834EB3007DA7964A5C6CE1479A322590C25A1CA5") {
+            let maxDate = moment(start).add(1, 'M').format('YYYY-MM-DD');
+            let minDate = moment(end).subtract(1, 'M').format('YYYY-MM-DD');
+
+          let searchResults: ISearchResult[] = await getBilan('Bilan_de_mission', start, end);
+          let searchMission :ISearchMissions[] = await getMissions(val.listId, val.fieldId, maxDate, minDate);
+          console.log('searchMission ',searchMission)
+          this.getPercentMission(searchResults, searchMission);
       }
     })
   }
 
-   Listdata = () => {
+  Listdata = () => {
     saveExcel(this.state.searchResults);
+  }
+
+   hasBlanMission = (searchResults: ISearchResult[], serchSuinvi: ISearchResult[]) :ISearchResult[]=> {
+    return serchSuinvi.filter(function (o1) {
+      return searchResults.some(function (o2) {
+        let urlSuivni = o1.SPWebUrl.split('/');
+        let urlBilan = o2.SPWebUrl.split('/');
+        let numSuivni = urlSuivni.pop() || urlSuivni.pop();
+        let numBilan = urlBilan.pop() || urlBilan.pop();
+        return numSuivni === numBilan; // return the ones with equal id
+      });
+    });
+  }
+
+  getMinMaxDate = (searchResults: ISearchResult[], dField: string) => {
+    let rangeDate = {
+      maxDate: '',
+      minDate: ''
+    }
+    var minIdx = 0, maxIdx = 0;
+    for (var i = 0; i < searchResults.length; i++) {
+      if (searchResults[i][dField] > searchResults[maxIdx][dField]) maxIdx = i;
+      if (searchResults[i][dField] < searchResults[minIdx][dField]) minIdx = i;
+    }
+    rangeDate.maxDate = moment(searchResults[maxIdx][dField]).add(1, 'M').format('YYYY-MM-DD');
+    rangeDate.minDate = moment(searchResults[minIdx][dField]).subtract(1, 'M').format('YYYY-MM-DD');
+    return rangeDate
+  }
+
+
+  getPercent = (searchResults: ISearchResult[]) => {
+    let countYes = 0;
+    let countNo = 0;
+    let listName;
+    let fieldName;
+    searchResults.forEach(element => {
+      listName = element.listName;
+      fieldName = element.fieldName
+      if (element.fieldValue === "true" || element.fieldValue === "OK") {
+        countYes += 1;
+      } else if (element.fieldValue === "false" || element.fieldValue === "AR") {
+        countNo += 1;
+      }
+    });
+    if ((countNo + countYes) > 0) {
+      let arrayItem = {
+        listId: listName,
+        fieldId: fieldName,
+        countYes: (100 * countYes) / (countYes + countNo),
+        countNo: (100 * countNo) / (countYes + countNo),
+      }
+      let { sortedResult } = this.state;
+      sortedResult.push(arrayItem);
+      this.setState({
+        sortedResult: sortedResult
+      })
+    }
+  }
+
+  getPercentMission= (searchResults: ISearchResult[], searchMission :ISearchMissions[]) => {
+      let result = searchMission.filter(function (o1) {
+        return searchResults.some(function (o2) {
+          if(o1.NumMission){
+            var re = /-/gi;
+            var NumMission = o1.NumMission.replace(re, "");
+            console.log('NumMission',NumMission);
+            let urlBilan = o2.SPWebUrl.split('/');
+            let numBilan = urlBilan.pop() || urlBilan.pop();
+            console.log('numBilan',numBilan);
+            return NumMission === numBilan; // return the ones with equal id  
+          }       
+        });
+      });
+      let arrayItem = {
+        listId :"Mission",
+        fieldId : "Sortie de rapport",
+  
+        countYes: (100 * result.length) / (result.length + (searchMission.length- result.length)),
+        countNo: (100 * (searchMission.length- result.length)) / (result.length  + (searchMission.length- result.length)),
+      }
+      let { sortedResult } = this.state;
+      sortedResult.push(arrayItem);
+      this.setState({
+        sortedResult: sortedResult
+      })
   }
 
   public render(): React.ReactElement<ISecafiIndicateursEtccProps> {
