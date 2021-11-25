@@ -1,8 +1,8 @@
 export interface ISecafiIndicateursEtccState {
-    searchResults: any[]; 
+    searchResults: any[];
+    sortedResult: any[];
     startDate: Date;  
     endDate: Date; 
-    percentageTrue: number;
-    percentageFalse: number;
   }
   
+
