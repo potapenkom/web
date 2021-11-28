@@ -11,23 +11,28 @@ import {
   Stack
 } from '@fluentui/react';
 import { DefaultButton } from '@fluentui/react/lib/Button';
-import { getBilan, ISearchBilan, getSuiviRelecture, ISearchResult, getMissions, ISearchMissions} from '../SecafiIndicateursEtccWebPart';
+import { getBilan, ISearchBilan, getSuiviRelecture, ISearchResult, getMissions, ISearchMissions } from '../SecafiIndicateursEtccWebPart';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { times } from 'lodash';
 
 const fileType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8';
 const fileExtension = '.xlsx';
-let Heading = [["Title", "Row"],];
+let Heading1 = [["List name", "Field Name", "Field Value", "Année", "Produit", "Num mission", "Equipe", "Client", "Sortie de rapport"],[]];
+let Heading2 = [["List name","Année", "Produit", "Num mission", "Equipe", "Client", "Sortie de rapport"],[]];
+
 const saveExcel = (ListData) => {
   if (ListData.length > 0) {
     const ws = XLSX.utils.book_new();
-    // const ws = XLSX.utils.json_to_sheet(csvData,{header:["A","B","C","D","E","F","G"], skipHeader:false});  
-    XLSX.utils.sheet_add_aoa(ws, Heading);
+    XLSX.utils.sheet_add_aoa(ws, Heading1);
     XLSX.utils.sheet_add_json(ws, ListData, { origin: 'A2', skipHeader: true });
-    const wb = { Sheets: { 'data': ws }, SheetNames: ['data'] };
+    const wb = { Sheets: { 'Bilan_de_mission': ws }, SheetNames: ['Bilan_de_mission'] };
+    XLSX.utils.book_append_sheet(wb, ws, "Suivi_de_relecture");
+    XLSX.utils.sheet_add_aoa(ws, Heading2);
+    XLSX.utils.book_append_sheet(wb, ws, "Missions");
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const data = new Blob([excelBuffer], { type: fileType });
-    saveAs(data, 'Data' + fileExtension);
+    saveAs(data, 'Data' + fileExtension);  
   }
 }
 
@@ -38,46 +43,60 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     this.state = {
       searchResults: [],
       sortedResult: [],
+      totalSearch:[],
       startDate: new Date('01-01-2021'),
       endDate: new Date('12-31-2021'),
     };
-    sp.setup({
-      spfxContext: this.props.context
-    });
+    this.GetData = this.GetData.bind(this);
   }
 
   public componentDidMount(): void {
+    this.GetData();
+  }
+
+  public GetData(): void {
+    this.setState({
+      sortedResult: [],
+      totalSearch:[]
+    });
     let start = moment(this.state.startDate).format('YYYY-MM-DD');
     let end = moment(this.state.endDate).format('YYYY-MM-DD');
     this.props.collectionData && this.props.collectionData.map(async (val) => {
       if (val.listId === "Bilan_de_mission") {
         let searchResults: ISearchResult[] = await getBilan(val.listId, start, end, val.fieldId,);
-        console.log('searchResults',searchResults)
+        this.setState(prevState => ({ totalSearch: prevState.totalSearch.concat(searchResults) }))
+        console.log(this.state.totalSearch)
+        console.log('searchResults Bilan_de_mission', searchResults)
         this.getPercent(searchResults);
       }
       if (val.listId === "Suivi_de_relecture_par_relecteur") {
         let searchResults: ISearchResult[] = await getBilan('Bilan_de_mission', start, end);
+        console.log('getBilan', searchResults)
         let serchSuinvi: ISearchResult[] = await getSuiviRelecture(val.listId, val.fieldId, this.getMinMaxDate(searchResults, 'DDerniereReunion').minDate, this.getMinMaxDate(searchResults, 'DDerniereReunion').maxDate);
-        console.log('hasBlanMission',this.hasBlanMission(searchResults, serchSuinvi))
+        console.log('searchResults Suivi_de_relecture_par_relecteur', serchSuinvi);
+        this.setState(prevState => ({ totalSearch: prevState.totalSearch.concat(serchSuinvi) }))
+        console.log(this.state.totalSearch)
+
         this.getPercent(this.hasBlanMission(searchResults, serchSuinvi));
       }
       if (val.listId === "0x010030F4365A045058449B6D5A1086834EB3007DA7964A5C6CE1479A322590C25A1CA5") {
-            let maxDate = moment(start).add(1, 'M').format('YYYY-MM-DD');
-            let minDate = moment(end).subtract(1, 'M').format('YYYY-MM-DD');
+        let maxDate = moment(start).subtract(1, 'M').format('YYYY-MM-DD');
+        let minDate = moment(end).add(1, 'M').format('YYYY-MM-DD');
 
-          let searchResults: ISearchResult[] = await getBilan('Bilan_de_mission', start, end);
-          let searchMission :ISearchMissions[] = await getMissions(val.listId, val.fieldId, maxDate, minDate);
-          console.log('searchMission ',searchMission)
-          this.getPercentMission(searchResults, searchMission);
+        let searchResults: ISearchResult[] = await getBilan('Bilan_de_mission', start, end);
+        let searchMission: ISearchMissions[] = await getMissions(val.listId, val.fieldId, maxDate, minDate);
+        console.log('searchMission ', searchMission)
+        this.getPercentMission(searchResults, searchMission);
       }
     })
+
   }
 
   Listdata = () => {
-    saveExcel(this.state.searchResults);
+    saveExcel(this.state.sortedResult);
   }
 
-   hasBlanMission = (searchResults: ISearchResult[], serchSuinvi: ISearchResult[]) :ISearchResult[]=> {
+  hasBlanMission = (searchResults: ISearchResult[], serchSuinvi: ISearchResult[]): ISearchResult[] => {
     return serchSuinvi.filter(function (o1) {
       return searchResults.some(function (o2) {
         let urlSuivni = o1.SPWebUrl.split('/');
@@ -99,6 +118,9 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
       if (searchResults[i][dField] > searchResults[maxIdx][dField]) maxIdx = i;
       if (searchResults[i][dField] < searchResults[minIdx][dField]) minIdx = i;
     }
+    console.log( 'max',searchResults[maxIdx][dField])
+    console.log( 'min',searchResults[minIdx][dField])
+
     rangeDate.maxDate = moment(searchResults[maxIdx][dField]).add(1, 'M').format('YYYY-MM-DD');
     rangeDate.minDate = moment(searchResults[minIdx][dField]).subtract(1, 'M').format('YYYY-MM-DD');
     return rangeDate
@@ -123,8 +145,8 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
       let arrayItem = {
         listId: listName,
         fieldId: fieldName,
-        countYes: (100 * countYes) / (countYes + countNo),
-        countNo: (100 * countNo) / (countYes + countNo),
+        countYes: Math.round((100 * countYes) / (countYes + countNo)) ,
+        countNo: Math.round((100 * countNo) / (countYes + countNo)),
       }
       let { sortedResult } = this.state;
       sortedResult.push(arrayItem);
@@ -134,32 +156,31 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     }
   }
 
-  getPercentMission= (searchResults: ISearchResult[], searchMission :ISearchMissions[]) => {
-      let result = searchMission.filter(function (o1) {
-        return searchResults.some(function (o2) {
-          if(o1.NumMission){
-            var re = /-/gi;
-            var NumMission = o1.NumMission.replace(re, "");
-            console.log('NumMission',NumMission);
-            let urlBilan = o2.SPWebUrl.split('/');
-            let numBilan = urlBilan.pop() || urlBilan.pop();
-            console.log('numBilan',numBilan);
-            return NumMission === numBilan; // return the ones with equal id  
-          }       
-        });
+  getPercentMission = (searchResults: ISearchResult[], searchMission: ISearchMissions[]) => {
+    let result = searchMission.filter(function (o1) {
+      return searchResults.some(function (o2) {
+        if (o1.NumMission) {
+          var re = /-/gi;
+          var NumMission = o1.NumMission.replace(re, "");
+          let urlBilan = o2.SPWebUrl.split('/');
+          let numBilan = urlBilan.pop() || urlBilan.pop();
+          return NumMission === numBilan; // return the ones with equal id  
+        }
       });
-      let arrayItem = {
-        listId :"Mission",
-        fieldId : "Sortie de rapport",
-  
-        countYes: (100 * result.length) / (result.length + (searchMission.length- result.length)),
-        countNo: (100 * (searchMission.length- result.length)) / (result.length  + (searchMission.length- result.length)),
-      }
-      let { sortedResult } = this.state;
-      sortedResult.push(arrayItem);
-      this.setState({
-        sortedResult: sortedResult
-      })
+    });
+    let arrayItem = {
+      listId: "Mission",
+      fieldId: "Sortie de rapport",
+
+      countYes: Math.round((100 * result.length) / (result.length + (searchMission.length - result.length))),
+      countNo:  Math.round((100 *(searchMission.length - result.length)) / (result.length + (searchMission.length - result.length))),
+    }
+
+    let { sortedResult } = this.state;
+    sortedResult.push(arrayItem);
+    this.setState({
+      sortedResult: sortedResult
+    })
   }
 
   public render(): React.ReactElement<ISecafiIndicateursEtccProps> {
@@ -172,7 +193,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
             value={this.state.startDate}
             placeholder="Select start date..."
             isMonthPickerVisible={false}
-            onSelectDate={this.handleStartDateSelection}
+            onSelectDate={date => this.setState({ startDate: date })}
             strings={defaultDatePickerStrings}
           />
           <DatePicker
@@ -180,13 +201,13 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
             key={"dEnd"}
             value={this.state.endDate}
             placeholder="Select end date..."
-            onSelectDate={this.handleEndDateSelection}
+            onSelectDate={date => this.setState({ endDate: date })}
             isMonthPickerVisible={false}
             strings={defaultDatePickerStrings}
           />
         </Stack>
         <DefaultButton id="Exel" onClick={this.Listdata} text="Export Exel" allowDisabledFocus />
-        <DefaultButton id="Refresh" text="Refresh data" allowDisabledFocus />
+        <DefaultButton id="Refresh" onClick={this.GetData} text="Refresh data" allowDisabledFocus />
         <div className={styles.row}>
           {this.state.sortedResult.map((val) => {
             console.log('map sortedResult ', this.state.sortedResult)

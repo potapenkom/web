@@ -41,12 +41,12 @@ export interface ISearchMissions extends ISearchResult {
   Client: string;
 }
 
-
 export function getBilan(cType: string, dStart: string, dEnd: string, fieldName?: string): Promise<any> {
   const _results: ISearchBilan[] = [];
   return new Promise((resolve, reject) => {
     pnp.sp.search(<SearchQuery>{
       Querytext: `ContentType:"${cType}"`,
+      RowLimit: 9999,
       SelectProperties: ['DDerniereReunion', 'SPWebUrl', `${fieldName}`],
       RefinementFilters: [`DDerniereReunion:range(${dStart},${dEnd})`]
     }).then((r: SearchResults) => {
@@ -69,10 +69,15 @@ export function getBilan(cType: string, dStart: string, dEnd: string, fieldName?
 }
 
 export function getSuiviRelecture(cType: string, fieldName: string, dStart: string, dEnd: string): Promise<any> {
+  console.log(cType, fieldName)
+  console.log('dStart', dStart)
+  console.log('dEnd', dEnd)
+
   const _results: ISearchSuivi[] = [];
   return new Promise((resolve, reject) => {
     pnp.sp.search(<SearchQuery>{
       Querytext: `ContentType:"${cType}"`,
+      RowLimit: 9999,
       SelectProperties: [`${fieldName}`, 'Created', 'SPWebUrl'],
       RefinementFilters: [`Created:range(${dStart}, ${dEnd})`]
     }).then((r: SearchResults) => {
@@ -94,14 +99,19 @@ export function getSuiviRelecture(cType: string, fieldName: string, dStart: stri
   });
 }
 
-export function getMissions(cType: string, fieldName: string, dStart: string, dEnd: string): Promise<any> {
+export function getMissions(cType: string, fieldName: string, dStart: string, dEnd: string, startrow: number = 0): Promise<any> {
   const _results: ISearchMissions[] = [];
   return new Promise((resolve, reject) => {
     pnp.sp.search(<SearchQuery>{
       Querytext: `ContentTypeID:"${cType}"`,
+      StartRow: startrow,
+      RowLimit: 9999,
       SelectProperties: ['Année', 'Produit', 'NumMission0', 'Equipe', 'Client', 'Sortie', 'SPWebUrl'],
-      RefinementFilters: [`Sortie:range(${dStart}, ${dEnd})`]
+      //   RefinementFilters: [`Sortie:range(${dStart}, ${dEnd})`],
     }).then((r: SearchResults) => {
+      let totalRows: number = r.TotalRows;
+      let pageSize: number = 500
+      console.log('totalRows', totalRows);
       r.PrimarySearchResults.forEach(result => {
         _results.push({
           fieldValue: result[`${fieldName}`],
@@ -116,6 +126,14 @@ export function getMissions(cType: string, fieldName: string, dStart: string, dE
           Client: result['Client'],
         });
       })
+      if (totalRows > pageSize) {
+        let totalPages = parseInt((totalRows / pageSize).toString());
+        for (let page = 1; page <= totalPages; page++) {
+          let startRow = page * pageSize;
+          this.getMissions(cType, fieldName, startRow);
+        }
+      }
+
       resolve(_results);
     })
       .catch((ex) => {
