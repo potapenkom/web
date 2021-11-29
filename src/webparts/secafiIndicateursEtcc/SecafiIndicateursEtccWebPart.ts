@@ -7,7 +7,6 @@ import {
 import { PropertyFieldCollectionData, CustomCollectionFieldType } from '@pnp/spfx-property-controls/lib/PropertyFieldCollectionData';
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import pnp, { SearchResults, SearchQuery, SearchQueryBuilder } from "sp-pnp-js";
-import "@pnp/sp/search";
 import * as strings from 'SecafiIndicateursEtccWebPartStrings';
 import SecafiIndicateursEtcc from './components/SecafiIndicateursEtcc';
 import { ISecafiIndicateursEtccProps } from './components/ISecafiIndicateursEtccProps';
@@ -20,8 +19,16 @@ export interface ISecafiIndicateursEtccWebPartProps {
 export interface ISearchResult {
   listName: string;
   fieldName: string;
-  SPWebUrl: string;
-  fieldValue: string;
+  fieldValue?: string;
+  SPWebUrl?: string;
+  DDerniereReunion?: Date;
+  DCreation?: Date;
+  Sortie?: Date;
+  Annee?: string;
+  Produit?: string;
+  NumMission?: string;
+  Equipe?: string;
+  Client?: string;
 }
 
 export interface ISearchBilan extends ISearchResult {
@@ -45,10 +52,10 @@ export function getBilan(cType: string, dStart: string, dEnd: string, fieldName?
   const _results: ISearchBilan[] = [];
   return new Promise((resolve, reject) => {
     pnp.sp.search(<SearchQuery>{
-      Querytext: `ContentType:"${cType}"`,
+      Querytext: `ContentTypeID:"0x0100E297556C5DCE1F428F2CCB8A9A2609F6*"`,
       RowLimit: 9999,
       SelectProperties: ['DDerniereReunion', 'SPWebUrl', `${fieldName}`],
-      RefinementFilters: [`DDerniereReunion:range(${dStart},${dEnd})`]
+      // RefinementFilters: [`DDerniereReunion:range(${dStart},${dEnd})`]
     }).then((r: SearchResults) => {
       r.PrimarySearchResults.forEach(result => {
         _results.push({
@@ -69,14 +76,10 @@ export function getBilan(cType: string, dStart: string, dEnd: string, fieldName?
 }
 
 export function getSuiviRelecture(cType: string, fieldName: string, dStart: string, dEnd: string): Promise<any> {
-  console.log(cType, fieldName)
-  console.log('dStart', dStart)
-  console.log('dEnd', dEnd)
-
   const _results: ISearchSuivi[] = [];
   return new Promise((resolve, reject) => {
     pnp.sp.search(<SearchQuery>{
-      Querytext: `ContentType:"${cType}"`,
+      Querytext: `ContentTypeID:"${cType}"`,
       RowLimit: 9999,
       SelectProperties: [`${fieldName}`, 'Created', 'SPWebUrl'],
       RefinementFilters: [`Created:range(${dStart}, ${dEnd})`]
@@ -98,7 +101,6 @@ export function getSuiviRelecture(cType: string, fieldName: string, dStart: stri
       });
   });
 }
-
 export function getMissions(cType: string, fieldName: string, dStart: string, dEnd: string, startrow: number = 0): Promise<any> {
   const _results: ISearchMissions[] = [];
   return new Promise((resolve, reject) => {
@@ -107,7 +109,7 @@ export function getMissions(cType: string, fieldName: string, dStart: string, dE
       StartRow: startrow,
       RowLimit: 9999,
       SelectProperties: ['Année', 'Produit', 'NumMission0', 'Equipe', 'Client', 'Sortie', 'SPWebUrl'],
-      //   RefinementFilters: [`Sortie:range(${dStart}, ${dEnd})`],
+      RefinementFilters: [`Sortie:range(${dStart}, ${dEnd})`],
     }).then((r: SearchResults) => {
       let totalRows: number = r.TotalRows;
       let pageSize: number = 500
@@ -126,14 +128,6 @@ export function getMissions(cType: string, fieldName: string, dStart: string, dE
           Client: result['Client'],
         });
       })
-      if (totalRows > pageSize) {
-        let totalPages = parseInt((totalRows / pageSize).toString());
-        for (let page = 1; page <= totalPages; page++) {
-          let startRow = page * pageSize;
-          this.getMissions(cType, fieldName, startRow);
-        }
-      }
-
       resolve(_results);
     })
       .catch((ex) => {
@@ -143,7 +137,45 @@ export function getMissions(cType: string, fieldName: string, dStart: string, dE
   });
 }
 
+export function getFullMissions(cType: string, fieldName: string, dStart: string, dEnd: string, startrow: number = 0):Promise<any> {
+  let currentResults: SearchResults = null;
+  let page = 0;
+  return new Promise((resolve, reject) => {
+    pnp.sp.search(<SearchQuery>{
+      Querytext: `ContentTypeID:"${cType}"`,
+      StartRow: startrow,
+      RowLimit: 9999,
+      SelectProperties: ['Année', 'Produit', 'NumMission0', 'Equipe', 'Client', 'Sortie', 'SPWebUrl'],
+    //  RefinementFilters: [`Sortie:range(${dStart}, ${dEnd})`],
+    }).then((r: SearchResults) => {
+      let totalRows: number = r.TotalRows;
+      let pageSize: number = 500
+      page = 0;
+      console.log('totalRows', totalRows);
 
+      currentResults = r
+      console.log('r', r)
+
+      console.log('currentResults', currentResults)
+      if (totalRows > pageSize) {
+        next()
+      }
+      resolve(currentResults);
+    })
+      .catch((ex) => {
+        console.error(ex);
+        reject(ex);
+      });
+  });
+
+  function next() {
+    currentResults.getPage(++page).then((r: SearchResults) => {
+
+      currentResults = r; // update the current results
+      // update UI with data...
+    });
+  }
+}
 
 export default class SecafiIndicateursEtccWebPart extends BaseClientSideWebPart<ISecafiIndicateursEtccWebPartProps> {
 
