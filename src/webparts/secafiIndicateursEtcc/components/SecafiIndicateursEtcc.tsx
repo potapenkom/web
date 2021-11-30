@@ -25,12 +25,12 @@ const saveExcel = (ListData, list1?, list2?) => {
     XLSX.utils.sheet_add_aoa(ws, Heading1);
     XLSX.utils.sheet_add_json(ws, ListData, { origin: 'A2', skipHeader: true });
     const wb = { Sheets: { 'Bilan_de_mission': ws }, SheetNames: ['Bilan_de_mission'] };
-    if(list1.length > 0){
+    if (list1.length > 0) {
       const ws = XLSX.utils.json_to_sheet(list1);
       XLSX.utils.sheet_add_aoa(ws, Heading1);
       XLSX.utils.book_append_sheet(wb, ws, "Suivi_de_relecture");
     }
-    if(list2.length > 0){
+    if (list2.length > 0) {
       const ws = XLSX.utils.json_to_sheet(list2);
       XLSX.utils.book_append_sheet(wb, ws, "Missions");
     }
@@ -47,6 +47,9 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
       searchResults: [],
       sortedResult: [],
       totalSearch: [],
+      totalSearchBilan: [],
+      totalSearchSuivi: [],
+      totalSearchMissions: [],
       startDate: new Date('01-01-2021'),
       endDate: new Date('12-31-2021'),
     };
@@ -66,33 +69,30 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     let end = moment(this.state.endDate).format('YYYY-MM-DD');
     this.props.collectionData && this.props.collectionData.map(async (val) => {
       if (val.listId === "0x0100E297556C5DCE1F428F2CCB8A9A2609F6*") {
-        console.log('Billan')
         let searchResults: ISearchResult[] = await getBilan(val.listId, start, end, val.fieldId,);
-        this.setState(prevState => ({ totalSearch: prevState.totalSearch.concat(searchResults) }))
-        console.log('totalSearch', this.state.totalSearch)
+        //   let searchMission: ISearchMissions[] = await getMissions(val.listId, val.fieldId, start, end);
+        this.setState(prevState => ({ totalSearchBilan: prevState.totalSearchBilan.concat(searchResults) }))
         this.getPercent(searchResults);
       }
       if (val.listId === "0x01002229A785DC4FB442A6ABC3C478C38232*") {
         let searchResults: ISearchResult[] = await getBilan('0x0100E297556C5DCE1F428F2CCB8A9A2609F6*', start, end);
-        console.log('searchResults getBilan', searchResults)
+        // console.log('searchResults getBilan', searchResults)
         let serchSuinvi: ISearchResult[] = await getSuiviRelecture(val.listId, val.fieldId, this.getMinMaxDate(searchResults, 'DDerniereReunion').minDate, this.getMinMaxDate(searchResults, 'DDerniereReunion').maxDate);
-        this.setState(prevState => ({ totalSearch: prevState.totalSearch.concat(serchSuinvi) }))
-        console.log('totalSearch ', this.state.totalSearch)
+        this.setState(prevState => ({ totalSearchSuivi: prevState.totalSearchSuivi.concat(serchSuinvi) }))
 
         this.getPercent(this.hasBlanMission(searchResults, serchSuinvi));
       }
       if (val.listId === "0x010030F4365A045058449B6D5A1086834EB3007DA7964A5C6CE1479A322590C25A1CA5") {
         let maxDate = moment(start).subtract(1, 'M').format('YYYY-MM-DD');
         let minDate = moment(end).add(1, 'M').format('YYYY-MM-DD');
-        //  let fullMissions: ISearchMissions[] = await getFullMissions(val.listId, val.fieldId, maxDate, minDate);
+        //   let fullMissions: ISearchMissions[] = await getFullMissions(val.listId, val.fieldId, maxDate, minDate);
         let searchResults: ISearchResult[] = await getBilan('0x0100E297556C5DCE1F428F2CCB8A9A2609F6*', start, end);
         let searchMission: ISearchMissions[] = await getMissions(val.listId, val.fieldId, maxDate, minDate);
-        console.log('hasBlanMissionSite',this.hasBlanMissionSite(searchResults, searchMission));
-        this.setState(prevState => ({ totalSearch: prevState.totalSearch.concat(this.hasBlanMissionSite(searchResults, searchMission)) }))
-        console.log('totalSearch', this.state.totalSearch)
-        console.log('searchResults getBilan', searchResults)
+        console.log('hasBlanMissionSite', this.hasBlanMissionSite(searchResults, searchMission));
+        this.setState(prevState => ({ totalSearchMissions: prevState.totalSearchMissions.concat(this.hasBlanMissionSite(searchResults, searchMission)) }))
+        //console.log('searchResults getBilan', searchResults)
 
-        console.log('searchMission ', searchMission)
+        //   console.log('searchMission ', searchMission)
         this.getPercentMission(searchResults, searchMission);
       }
     })
@@ -102,48 +102,86 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     let resultBilan: ISearchResult[] = [];
     let resultSuivi: ISearchResult[] = [];
     let resultMision: ISearchResult[] = [];
-    this.state.totalSearch.forEach(element => {
-      if (this.decoderCType(element['listName']) === "Bilan_de_mission") {
-        resultBilan.push({
-          listName: this.decoderCType(element['listName']),
-          fieldName: this.decoderField(element['fieldName']),
-          fieldValue: element['fieldValue'],
-          // Annee: element['Annee'],
-          // Produit: element['Produit'],
-          // NumMission: element['NumMission0'],
-          // Equipe: element['Equipe'],
-          // Client: element['Client'],
-          // Sortie: element['Sortie']
-        });
+    this.state.totalSearchBilan.forEach(element => {
 
-      }
-        if (this.decoderCType(element['listName']) === "Suivi_de_relecture_par_relecteur") {
-          resultSuivi.push({
-            listName: this.decoderCType(element['listName']),
-            fieldName: this.decoderField(element['fieldName']),
-            fieldValue: element['fieldValue'],
-            // Annee: element['Annee'],
-            // Produit: element['Produit'],
-            // NumMission: element['NumMission0'],
-            // Equipe: element['Equipe'],
-            // Client: element['Client'],
-            // Sortie: element['Sortie']
-          });
-        }
-        if (this.decoderCType(element['listName']) === "Mission") {
-          resultMision.push({
-            listName: this.decoderCType(element['listName']),
-            fieldName: this.decoderField(element['fieldName']),
-            Annee: element['Annee'],
-            Produit: element['Produit'],
-            NumMission: element['NumMission'],
-            Equipe: element['Equipe'],
-            Client: element['Client'],
-            Sortie: element['Sortie']
-          });
-        }
+      resultBilan.push({
+        listName: this.decoderCType(element['listName']),
+        fieldName: this.decoderField(element['fieldName']),
+        fieldValue: element['fieldValue'],
+        //SPWebUrl: element['SPWebUrl']
+        // Annee: element['Annee'],
+        //  Produit: element['Produit'],
+        // NumMission: element['NumMission0'],
+        // Equipe: element['Equipe'],
+        // Client: element['Client'],
+        // Sortie: element['Sortie']
+      });
+    })
+    this.state.totalSearchSuivi.forEach(element => {
+      resultSuivi.push({
+        listName: this.decoderCType(element['listName']),
+        fieldName: this.decoderField(element['fieldName']),
+        fieldValue: element['fieldValue'],
+        //SPWebUrl: element['SPWebUrl']
+        //  Annee: element['Annee'],
+        //  Produit: element['Produit'],
+        //  NumMission: element['NumMission0'],
+        //  Equipe: element['Equipe'],
+        //  Client: element['Client'],
+        //  Sortie: element['Sortie']
+      });
+    })
+    this.state.totalSearchMissions.forEach(element => {
+      resultMision.push({
+        listName: this.decoderCType(element['listName']),
+        fieldName: this.decoderField(element['fieldName']),
+        Annee: element['Annee'],
+        Produit: element['Produit'],
+        NumMission: element['NumMission'],
+        Equipe: element['Equipe'],
+        Client: element['Client'],
+        Sortie: element['Sortie']
+      });
     });
-    saveExcel(resultBilan, resultSuivi, resultMision);
+
+    function getRelative(resultMision: ISearchResult[], resultItems: ISearchResult[]) {
+      console.log('resultMision',resultMision);
+      console.log('resultItems',resultItems);
+      
+      resultMision.filter(function (o1) {
+        return resultItems.some(function (o2) {
+          if (o1.NumMission) {
+            var re = /-/gi;
+            var NumMission = o1.NumMission.replace(re, "");
+            let url = o2['SPWebUrl'].split('/');
+            let num = url.pop() || url.pop();
+            if(  NumMission === num){
+              resultItems.push({
+                listName:  o2['listName'],
+                fieldName: o2['fieldName'],
+                fieldValue: o2['fieldValue'],
+                Annee: o1['Annee'],
+                Produit: o1['Produit'],
+                NumMission: o1['NumMission'],
+                Equipe: o1['Equipe'],
+                Client: o1['Client'],
+                Sortie: o1['Sortie']
+              })
+            } else{
+              resultItems.push({
+                listName:  o2['listName'],
+                fieldName: o2['fieldName'],
+                fieldValue: o2['fieldValue'],
+              })
+            }
+           
+          }
+        });
+      });
+    }
+    //getRelative(resultMision, resultBilan);
+    //getRelative(resultMision, resultMision);
+    saveExcel(resultBilan, resultSuivi,resultMision);
   }
 
   hasBlanMission = (searchResults: ISearchResult[], serchSuinvi: ISearchResult[]): ISearchResult[] => {
@@ -181,9 +219,9 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     searchResults.forEach(element => {
       listName = element.listName;
       fieldName = element.fieldName
-      if (element.fieldValue === "true" || element.fieldValue === "OK" || element.fieldValue === "Oui") {
+      if (element.fieldValue === "true" || element.fieldValue === "True\n\n1" || element.fieldValue === "OK" || element.fieldValue === "Oui") {
         countYes += 1;
-      } else if (element.fieldValue === "false" || element.fieldValue === "AR" || element.fieldValue === "Non") {
+      } else if (element.fieldValue === "false" || element.fieldValue === "False\n\n0" || element.fieldValue === "AR" || element.fieldValue === "Non") {
         countNo += 1;
       }
     });
@@ -202,7 +240,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     }
   }
 
-  hasBlanMissionSite = (searchResults: ISearchResult[], searchMission: ISearchMissions[]) : ISearchResult[]=> {
+  hasBlanMissionSite = (searchResults: ISearchResult[], searchMission: ISearchMissions[]): ISearchResult[] => {
     return searchMission.filter(function (o1) {
       return searchResults.some(function (o2) {
         if (o1.NumMission) {
@@ -274,7 +312,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
         <DefaultButton id="Refresh" onClick={this.GetData} text="Refresh data" allowDisabledFocus />
         <div className={styles.row}>
           {this.state.sortedResult.map((val) => {
-            console.log('map sortedResult ', this.state.sortedResult)
+            //console.log('map sortedResult ', this.state.sortedResult)
             return (
               <ChartControl
                 type={ChartType.Bar}

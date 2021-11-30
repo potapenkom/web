@@ -55,7 +55,7 @@ export function getBilan(cType: string, dStart: string, dEnd: string, fieldName?
       Querytext: `ContentTypeID:"0x0100E297556C5DCE1F428F2CCB8A9A2609F6*"`,
       RowLimit: 9999,
       SelectProperties: ['DDerniereReunion', 'SPWebUrl', `${fieldName}`],
-      // RefinementFilters: [`DDerniereReunion:range(${dStart},${dEnd})`]
+      RefinementFilters: [`DDerniereReunion:range(${dStart},${dEnd})`]
     }).then((r: SearchResults) => {
       r.PrimarySearchResults.forEach(result => {
         _results.push({
@@ -101,19 +101,18 @@ export function getSuiviRelecture(cType: string, fieldName: string, dStart: stri
       });
   });
 }
-export function getMissions(cType: string, fieldName: string, dStart: string, dEnd: string, startrow: number = 0): Promise<any> {
+
+export function getMissions(cType: string, fieldName: string, dStart: string, dEnd: string): Promise<any> {
   const _results: ISearchMissions[] = [];
   return new Promise((resolve, reject) => {
     pnp.sp.search(<SearchQuery>{
       Querytext: `ContentTypeID:"${cType}"`,
-      StartRow: startrow,
       RowLimit: 9999,
       SelectProperties: ['Année', 'Produit', 'NumMission0', 'Equipe', 'Client', 'Sortie', 'SPWebUrl'],
       RefinementFilters: [`Sortie:range(${dStart}, ${dEnd})`],
     }).then((r: SearchResults) => {
       let totalRows: number = r.TotalRows;
       let pageSize: number = 500
-      console.log('totalRows', totalRows);
       r.PrimarySearchResults.forEach(result => {
         _results.push({
           fieldValue: result[`${fieldName}`],
@@ -137,44 +136,55 @@ export function getMissions(cType: string, fieldName: string, dStart: string, dE
   });
 }
 
-export function getFullMissions(cType: string, fieldName: string, dStart: string, dEnd: string, startrow: number = 0):Promise<any> {
+export function getFullMissions(cType: string, fieldName: string, dStart: string, dEnd: string): Promise<any> {
+  const _results: ISearchMissions[] = [];
   let currentResults: SearchResults = null;
   let page = 0;
   return new Promise((resolve, reject) => {
     pnp.sp.search(<SearchQuery>{
       Querytext: `ContentTypeID:"${cType}"`,
-      StartRow: startrow,
       RowLimit: 9999,
       SelectProperties: ['Année', 'Produit', 'NumMission0', 'Equipe', 'Client', 'Sortie', 'SPWebUrl'],
-    //  RefinementFilters: [`Sortie:range(${dStart}, ${dEnd})`],
+      // RefinementFilters: [`Sortie:range(${dStart}, ${dEnd})`],
     }).then((r: SearchResults) => {
       let totalRows: number = r.TotalRows;
       let pageSize: number = 500
-      page = 0;
       console.log('totalRows', totalRows);
+      console.log('r', r);
 
-      currentResults = r
-      console.log('r', r)
-
-      console.log('currentResults', currentResults)
+      currentResults = r;
+      console.log('currentResults', currentResults);
       if (totalRows > pageSize) {
-        next()
+        let totalPages = parseInt((totalRows / pageSize).toString());
+        console.log('totalPages',totalPages);
       }
-      resolve(currentResults);
+      currentResults.PrimarySearchResults.forEach(result => {
+        _results.push({
+          fieldValue: result[`${fieldName}`],
+          SPWebUrl: result['SPWebUrl'],
+          listName: `${cType}`,
+          fieldName: `${fieldName}`,
+          Sortie: result['Sortie'],
+          Annee: result['Année'],
+          Produit: result['Produit'],
+          NumMission: result['NumMission0'],
+          Equipe: result['Equipe'],
+          Client: result['Client'],
+        });
+      })
+      resolve(_results);
     })
       .catch((ex) => {
         console.error(ex);
         reject(ex);
       });
   });
-
-  function next() {
-    currentResults.getPage(++page).then((r: SearchResults) => {
-
-      currentResults = r; // update the current results
-      // update UI with data...
+  function getPagedResult(pageNum,numItems){
+    currentResults.getPage(pageNum,numItems).then(function(pagedResults){
+        var data = pagedResults.PrimarySearchResults;
+        return data
     });
-  }
+}
 }
 
 export default class SecafiIndicateursEtccWebPart extends BaseClientSideWebPart<ISecafiIndicateursEtccWebPartProps> {
