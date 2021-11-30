@@ -109,12 +109,6 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
         fieldName: this.decoderField(element['fieldName']),
         fieldValue: element['fieldValue'],
         SPWebUrl: element['SPWebUrl']
-        // Annee: element['Annee'],
-        //  Produit: element['Produit'],
-        // NumMission: element['NumMission0'],
-        // Equipe: element['Equipe'],
-        // Client: element['Client'],
-        // Sortie: element['Sortie']
       });
     })
     this.state.totalSearchSuivi.forEach(element => {
@@ -123,12 +117,6 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
         fieldName: this.decoderField(element['fieldName']),
         fieldValue: element['fieldValue'],
         SPWebUrl: element['SPWebUrl']
-        //  Annee: element['Annee'],
-        //  Produit: element['Produit'],
-        //  NumMission: element['NumMission0'],
-        //  Equipe: element['Equipe'],
-        //  Client: element['Client'],
-        //  Sortie: element['Sortie']
       });
     })
     this.state.totalSearchMissions.forEach(element => {
@@ -287,6 +275,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
       <div className={styles.container}>
         <Stack horizontal>
           <DatePicker
+            style={{marginRight: '15px'}}
             label="Start Date"
             key={"dStart"}
             value={this.state.startDate}
@@ -305,7 +294,11 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
             strings={defaultDatePickerStrings}
           />
         </Stack>
-        <DefaultButton id="Exel" onClick={this.Listdata} text="Export Exel" allowDisabledFocus />
+        <DefaultButton id="Exel" 
+        onClick={this.Listdata} 
+        text="Export Exel" 
+        allowDisabledFocus  
+        style={{marginRight: '27px'}}/>
         <DefaultButton id="Refresh" onClick={this.GetData} text="Refresh data" allowDisabledFocus />
         <div className={styles.row}>
           {this.state.sortedResult.map((val) => {
