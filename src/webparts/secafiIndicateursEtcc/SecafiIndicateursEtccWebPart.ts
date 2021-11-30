@@ -138,53 +138,53 @@ export function getMissions(cType: string, fieldName: string, dStart: string, dE
 
 export function getFullMissions(cType: string, fieldName: string, dStart: string, dEnd: string): Promise<any> {
   const _results: ISearchMissions[] = [];
-  let currentResults: SearchResults = null;
-  let page = 0;
+  let currentResults: any[] = null;
   return new Promise((resolve, reject) => {
-    pnp.sp.search(<SearchQuery>{
-      Querytext: `ContentTypeID:"${cType}"`,
-      RowLimit: 9999,
-      SelectProperties: ['Année', 'Produit', 'NumMission0', 'Equipe', 'Client', 'Sortie', 'SPWebUrl'],
-      // RefinementFilters: [`Sortie:range(${dStart}, ${dEnd})`],
-    }).then((r: SearchResults) => {
-      let totalRows: number = r.TotalRows;
-      let pageSize: number = 500
-      console.log('totalRows', totalRows);
-      console.log('r', r);
-
-      currentResults = r;
-      console.log('currentResults', currentResults);
-      if (totalRows > pageSize) {
-        let totalPages = parseInt((totalRows / pageSize).toString());
-        console.log('totalPages',totalPages);
-      }
-      currentResults.PrimarySearchResults.forEach(result => {
-        _results.push({
-          fieldValue: result[`${fieldName}`],
-          SPWebUrl: result['SPWebUrl'],
-          listName: `${cType}`,
-          fieldName: `${fieldName}`,
-          Sortie: result['Sortie'],
-          Annee: result['Année'],
-          Produit: result['Produit'],
-          NumMission: result['NumMission0'],
-          Equipe: result['Equipe'],
-          Client: result['Client'],
-        });
+    startSearch();
+    function startSearch(page: number = 0) {
+      pnp.sp.search(<SearchQuery>{
+        Querytext: `ContentTypeID:"${cType}"`,
+        StartRow: page,
+        RowLimit: 500,
+        SelectProperties: ['Année', 'Produit', 'NumMission0', 'Equipe', 'Client', 'Sortie', 'SPWebUrl'],
+        // RefinementFilters: [`Sortie:range(${dStart}, ${dEnd})`],
+      }).then((r: SearchResults) => {
+        let totalRows: number = r.TotalRows;
+        console.log('totalRows',totalRows);
+        let pageSize: number = 500
+        currentResults = r.PrimarySearchResults;
+        console.log('currentResults',currentResults)
+        if (totalRows > pageSize) {
+          let totalPages = parseInt((totalRows / pageSize).toString());
+          console.log('totalPages',totalPages);
+          for (let page = 1; page <= totalPages; page++) {
+            let startRow = page * pageSize;
+            console.log('startRow',startRow)
+           // startSearch(startRow);
+          }
+        }
+        currentResults.forEach(result => {
+          _results.push({
+            fieldValue: result[`${fieldName}`],
+            SPWebUrl: result['SPWebUrl'],
+            listName: `${cType}`,
+            fieldName: `${fieldName}`,
+            Sortie: result['Sortie'],
+            Annee: result['Année'],
+            Produit: result['Produit'],
+            NumMission: result['NumMission0'],
+            Equipe: result['Equipe'],
+            Client: result['Client'],
+          });
+        })
+        resolve(_results);
       })
-      resolve(_results);
-    })
-      .catch((ex) => {
-        console.error(ex);
-        reject(ex);
-      });
+        .catch((ex) => {
+          console.error(ex);
+          reject(ex);
+        });
+    }
   });
-  function getPagedResult(pageNum,numItems){
-    currentResults.getPage(pageNum,numItems).then(function(pagedResults){
-        var data = pagedResults.PrimarySearchResults;
-        return data
-    });
-}
 }
 
 export default class SecafiIndicateursEtccWebPart extends BaseClientSideWebPart<ISecafiIndicateursEtccWebPartProps> {

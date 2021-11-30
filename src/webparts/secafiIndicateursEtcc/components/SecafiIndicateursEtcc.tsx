@@ -85,7 +85,8 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
       if (val.listId === "0x010030F4365A045058449B6D5A1086834EB3007DA7964A5C6CE1479A322590C25A1CA5") {
         let maxDate = moment(start).subtract(1, 'M').format('YYYY-MM-DD');
         let minDate = moment(end).add(1, 'M').format('YYYY-MM-DD');
-        //   let fullMissions: ISearchMissions[] = await getFullMissions(val.listId, val.fieldId, maxDate, minDate);
+        let fullMissions: ISearchMissions[] = await getFullMissions(val.listId, val.fieldId, maxDate, minDate);
+        console.log('fullMissions',fullMissions)
         let searchResults: ISearchResult[] = await getBilan('0x0100E297556C5DCE1F428F2CCB8A9A2609F6*', start, end);
         let searchMission: ISearchMissions[] = await getMissions(val.listId, val.fieldId, maxDate, minDate);
         console.log('hasBlanMissionSite', this.hasBlanMissionSite(searchResults, searchMission));
