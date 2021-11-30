@@ -138,32 +138,19 @@ export function getMissions(cType: string, fieldName: string, dStart: string, dE
 
 export function getFullMissions(cType: string, fieldName: string, dStart: string, dEnd: string): Promise<any> {
   const _results: ISearchMissions[] = [];
-  let currentResults: any[] = null;
   return new Promise((resolve, reject) => {
-    startSearch();
-    function startSearch(page: number = 0) {
+    function startSearch(page: number = 0, rowLimit = 500) {
       pnp.sp.search(<SearchQuery>{
         Querytext: `ContentTypeID:"${cType}"`,
         StartRow: page,
-        RowLimit: 500,
+        RowLimit: rowLimit,
         SelectProperties: ['Année', 'Produit', 'NumMission0', 'Equipe', 'Client', 'Sortie', 'SPWebUrl'],
         // RefinementFilters: [`Sortie:range(${dStart}, ${dEnd})`],
       }).then((r: SearchResults) => {
         let totalRows: number = r.TotalRows;
-        console.log('totalRows',totalRows);
-        let pageSize: number = 500
-        currentResults = r.PrimarySearchResults;
-        console.log('currentResults',currentResults)
-        if (totalRows > pageSize) {
-          let totalPages = parseInt((totalRows / pageSize).toString());
-          console.log('totalPages',totalPages);
-          for (let page = 1; page <= totalPages; page++) {
-            let startRow = page * pageSize;
-            console.log('startRow',startRow)
-           // startSearch(startRow);
-          }
-        }
-        currentResults.forEach(result => {
+        console.log('totalRows', totalRows);
+        let pageSize: number = rowLimit
+        r.PrimarySearchResults.forEach(result => {
           _results.push({
             fieldValue: result[`${fieldName}`],
             SPWebUrl: result['SPWebUrl'],
@@ -177,7 +164,16 @@ export function getFullMissions(cType: string, fieldName: string, dStart: string
             Client: result['Client'],
           });
         })
-        resolve(_results);
+        if (totalRows < pageSize) {
+          resolve(_results);
+        } else{
+          console.log('pageSize',pageSize)
+          page = 1 
+          let startRow = page * pageSize
+          console.log('startRow',startRow)
+          this.startSearch(startRow, pageSize)
+          ++page
+        }
       })
         .catch((ex) => {
           console.error(ex);

@@ -85,15 +85,16 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
       if (val.listId === "0x010030F4365A045058449B6D5A1086834EB3007DA7964A5C6CE1479A322590C25A1CA5") {
         let maxDate = moment(start).subtract(1, 'M').format('YYYY-MM-DD');
         let minDate = moment(end).add(1, 'M').format('YYYY-MM-DD');
-        let fullMissions: ISearchMissions[] = await getFullMissions(val.listId, val.fieldId, maxDate, minDate);
-        console.log('fullMissions',fullMissions)
         let searchResults: ISearchResult[] = await getBilan('0x0100E297556C5DCE1F428F2CCB8A9A2609F6*', start, end);
         let searchMission: ISearchMissions[] = await getMissions(val.listId, val.fieldId, maxDate, minDate);
-        console.log('hasBlanMissionSite', this.hasBlanMissionSite(searchResults, searchMission));
-        this.setState(prevState => ({ totalSearchMissions: prevState.totalSearchMissions.concat(this.hasBlanMissionSite(searchResults, searchMission)) }))
-        //console.log('searchResults getBilan', searchResults)
+        //let fullMissions: ISearchMissions[] = await getFullMissions(val.listId, val.fieldId, maxDate, minDate);
+        //console.log('fullMissions', fullMissions);
 
-        //   console.log('searchMission ', searchMission)
+        console.log('hasBlanMissionSite', this.hasBlanMissionSite(searchResults, searchMission));
+        this.setState(prevState => ({ totalSearchMissions: prevState.totalSearchMissions.concat(this.hasBlanMissionSite(searchResults, searchMission)) }));
+        //console.log('searchResults getBilan', searchResults);
+
+        //   console.log('searchMission ', searchMission);
         this.getPercentMission(searchResults, searchMission);
       }
     })
@@ -134,20 +135,20 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     });
 
     function getRelative(resultMision: ISearchResult[], resultItems: ISearchResult[]) {
-      console.log('resultMision',resultMision);
-      console.log('resultItems',resultItems);
-      
-    return resultItems.map(function (o1) {
+      console.log('resultMision', resultMision);
+      console.log('resultItems', resultItems);
+
+      return resultItems.map(function (o1) {
         return resultMision.some(function (o2) {
           if (o2.NumMission) {
             var re = /-/gi;
             var NumMission = o2.NumMission.replace(re, "");
-            console.log('o1.SPWebUrl',o1.SPWebUrl)
+            console.log('o1.SPWebUrl', o1.SPWebUrl)
             let url = o1.SPWebUrl.split('/');
             let num = url.pop() || url.pop();
-            if( NumMission === num){
+            if (NumMission === num) {
               resultItems.push({
-                listName:  o1['listName'],
+                listName: o1['listName'],
                 fieldName: o1['fieldName'],
                 fieldValue: o1['fieldValue'],
                 Annee: o2['Annee'],
@@ -157,7 +158,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
                 Client: o2['Client'],
                 Sortie: o2['Sortie']
               })
-            } 
+            }
             delete o1.SPWebUrl;
           }
         });
@@ -167,7 +168,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     getRelative(resultMision, resultSuivi);
     console.log('resultBilan', resultBilan)
     console.log('resultSuivi', resultSuivi)
-    saveExcel(resultBilan, resultSuivi,resultMision);
+    saveExcel(resultBilan, resultSuivi, resultMision);
   }
 
   hasBlanMission = (searchResults: ISearchResult[], serchSuinvi: ISearchResult[]): ISearchResult[] => {
@@ -276,7 +277,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
       <div className={styles.container}>
         <Stack horizontal>
           <DatePicker
-            style={{marginRight: '15px'}}
+            style={{ marginRight: '15px' }}
             label="Start Date"
             key={"dStart"}
             value={this.state.startDate}
@@ -295,11 +296,11 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
             strings={defaultDatePickerStrings}
           />
         </Stack>
-        <DefaultButton id="Exel" 
-        onClick={this.Listdata} 
-        text="Export Exel" 
-        allowDisabledFocus  
-        style={{marginRight: '27px'}}/>
+        <DefaultButton id="Exel"
+          onClick={this.Listdata}
+          text="Export Exel"
+          allowDisabledFocus
+          style={{ marginRight: '27px' }} />
         <DefaultButton id="Refresh" onClick={this.GetData} text="Refresh data" allowDisabledFocus />
         <div className={styles.row}>
           {this.state.sortedResult.map((val) => {
