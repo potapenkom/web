@@ -108,7 +108,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
         listName: this.decoderCType(element['listName']),
         fieldName: this.decoderField(element['fieldName']),
         fieldValue: element['fieldValue'],
-        //SPWebUrl: element['SPWebUrl']
+        SPWebUrl: element['SPWebUrl']
         // Annee: element['Annee'],
         //  Produit: element['Produit'],
         // NumMission: element['NumMission0'],
@@ -122,7 +122,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
         listName: this.decoderCType(element['listName']),
         fieldName: this.decoderField(element['fieldName']),
         fieldValue: element['fieldValue'],
-        //SPWebUrl: element['SPWebUrl']
+        SPWebUrl: element['SPWebUrl']
         //  Annee: element['Annee'],
         //  Produit: element['Produit'],
         //  NumMission: element['NumMission0'],
@@ -148,39 +148,36 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
       console.log('resultMision',resultMision);
       console.log('resultItems',resultItems);
       
-      resultMision.filter(function (o1) {
-        return resultItems.some(function (o2) {
-          if (o1.NumMission) {
+    return resultItems.map(function (o1) {
+        return resultMision.some(function (o2) {
+          if (o2.NumMission) {
             var re = /-/gi;
-            var NumMission = o1.NumMission.replace(re, "");
-            let url = o2['SPWebUrl'].split('/');
+            var NumMission = o2.NumMission.replace(re, "");
+            console.log('o1.SPWebUrl',o1.SPWebUrl)
+            let url = o1.SPWebUrl.split('/');
             let num = url.pop() || url.pop();
-            if(  NumMission === num){
+            if( NumMission === num){
               resultItems.push({
-                listName:  o2['listName'],
-                fieldName: o2['fieldName'],
-                fieldValue: o2['fieldValue'],
-                Annee: o1['Annee'],
-                Produit: o1['Produit'],
-                NumMission: o1['NumMission'],
-                Equipe: o1['Equipe'],
-                Client: o1['Client'],
-                Sortie: o1['Sortie']
+                listName:  o1['listName'],
+                fieldName: o1['fieldName'],
+                fieldValue: o1['fieldValue'],
+                Annee: o2['Annee'],
+                Produit: o2['Produit'],
+                NumMission: o2['NumMission'],
+                Equipe: o2['Equipe'],
+                Client: o2['Client'],
+                Sortie: o2['Sortie']
               })
-            } else{
-              resultItems.push({
-                listName:  o2['listName'],
-                fieldName: o2['fieldName'],
-                fieldValue: o2['fieldValue'],
-              })
-            }
-           
+            } 
+            delete o1.SPWebUrl;
           }
         });
       });
     }
-    //getRelative(resultMision, resultBilan);
-    //getRelative(resultMision, resultMision);
+    getRelative(resultMision, resultBilan);
+    getRelative(resultMision, resultSuivi);
+    console.log('resultBilan', resultBilan)
+    console.log('resultSuivi', resultSuivi)
     saveExcel(resultBilan, resultSuivi,resultMision);
   }
 
