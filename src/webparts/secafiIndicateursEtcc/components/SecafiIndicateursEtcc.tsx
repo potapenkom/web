@@ -9,8 +9,11 @@ import {
   defaultDatePickerStrings,
   Stack
 } from '@fluentui/react';
+//import {  ISearchResult, SearchQueryBuilder } from '@pnp/sp/presets/all';
+import { sp, ISearchResult, SearchQueryBuilder } from "@pnp/sp/presets/all";
+import '@pnp/sp/search';
 import { DefaultButton } from '@fluentui/react/lib/Button';
-import { getBilan, ISearchBilan, getSuiviRelecture, ISearchResult, getMissions, ISearchMissions, getFullMissions } from '../SecafiIndicateursEtccWebPart';
+import { ISearchRes } from '../SecafiIndicateursEtccWebPart';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
@@ -18,7 +21,6 @@ const fileType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sh
 const fileExtension = '.xlsx';
 let Heading1 = [["List name", "Field Name", "Field Value", "Année", "Produit", "Num mission", "Equipe", "Client", "Sortie de rapport"], []];
 let Heading2 = [["List name", "Année", "Produit", "Num mission", "Equipe", "Client", "Sortie de rapport"], []];
-
 const saveExcel = (ListData, list1?, list2?) => {
   if (ListData.length > 0) {
     const ws = XLSX.utils.book_new();
@@ -45,6 +47,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     super(props);
     this.state = {
       searchResults: [],
+      searchPartRes: [],
       sortedResult: [],
       totalSearch: [],
       totalSearchBilan: [],
@@ -69,41 +72,151 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     let end = moment(this.state.endDate).format('YYYY-MM-DD');
     this.props.collectionData && this.props.collectionData.map(async (val) => {
       if (val.listId === "0x0100E297556C5DCE1F428F2CCB8A9A2609F6*") {
-        let searchResults: ISearchResult[] = await getBilan(val.listId, start, end, val.fieldId,);
-        //   let searchMission: ISearchMissions[] = await getMissions(val.listId, val.fieldId, start, end);
+        let searchResults: ISearchRes[] = await this.searchBilan(val.listId, start, end, 0, 500, val.fieldId,);
         this.setState(prevState => ({ totalSearchBilan: prevState.totalSearchBilan.concat(searchResults) }))
         this.getPercent(searchResults);
       }
       if (val.listId === "0x01002229A785DC4FB442A6ABC3C478C38232*") {
-        let searchResults: ISearchResult[] = await getBilan('0x0100E297556C5DCE1F428F2CCB8A9A2609F6*', start, end);
-        // console.log('searchResults getBilan', searchResults)
-        let serchSuinvi: ISearchResult[] = await getSuiviRelecture(val.listId, val.fieldId, this.getMinMaxDate(searchResults, 'DDerniereReunion').minDate, this.getMinMaxDate(searchResults, 'DDerniereReunion').maxDate);
+        let searchResults: ISearchRes[] = await this.searchBilan('0x0100E297556C5DCE1F428F2CCB8A9A2609F6*', start, end, 0, 500);
+        let serchSuinvi: ISearchRes[] = await this.searchSuiviRelecture(val.listId, val.fieldId, this.getMinMaxDate(searchResults, 'DDerniereReunion').minDate, this.getMinMaxDate(searchResults, 'DDerniereReunion').maxDate, 0, 500);
         this.setState(prevState => ({ totalSearchSuivi: prevState.totalSearchSuivi.concat(serchSuinvi) }))
-
         this.getPercent(this.hasBlanMission(searchResults, serchSuinvi));
       }
       if (val.listId === "0x010030F4365A045058449B6D5A1086834EB3007DA7964A5C6CE1479A322590C25A1CA5") {
         let maxDate = moment(start).subtract(1, 'M').format('YYYY-MM-DD');
         let minDate = moment(end).add(1, 'M').format('YYYY-MM-DD');
-        let searchResults: ISearchResult[] = await getBilan('0x0100E297556C5DCE1F428F2CCB8A9A2609F6*', start, end);
-        let searchMission: ISearchMissions[] = await getMissions(val.listId, val.fieldId, maxDate, minDate);
-        //let fullMissions: ISearchMissions[] = await getFullMissions(val.listId, val.fieldId, maxDate, minDate);
-        //console.log('fullMissions', fullMissions);
-
-        console.log('hasBlanMissionSite', this.hasBlanMissionSite(searchResults, searchMission));
+        let searchResults: ISearchRes[] = await this.searchBilan('0x0100E297556C5DCE1F428F2CCB8A9A2609F6*', start, end, 0, 500);
+        let searchMission: ISearchRes[] = await this.searchMissions(val.listId, val.fieldId, maxDate, minDate, 0, 500);
         this.setState(prevState => ({ totalSearchMissions: prevState.totalSearchMissions.concat(this.hasBlanMissionSite(searchResults, searchMission)) }));
-        //console.log('searchResults getBilan', searchResults);
-
-        //   console.log('searchMission ', searchMission);
         this.getPercentMission(searchResults, searchMission);
       }
     })
   }
+  public searchBilan(cType: string, dStart: string, dEnd: string, row: number, pageSize: number, fieldName?: string): Promise<any> {
+    let _results: ISearchRes[] = [];
+    return new Promise((resolve, reject) => {
+      const q =
+        SearchQueryBuilder(`ContentTypeID:"${cType}"`)
+          .selectProperties('DDerniereReunion', 'SPWebUrl', `${fieldName}`)
+          .refinementFilters(`DDerniereReunion:range(${dStart},${dEnd})`)
+          .startRow(row)
+          .rowLimit(pageSize)
+      sp.search(q).then((data) => {
+        this.setState(prevState => ({ searchPartRes: prevState.searchPartRes.concat(data.PrimarySearchResults) }));
+        let totalRows = data.TotalRows
+        let nexstartRow = row + pageSize
+        if (totalRows < nexstartRow) {
+          this.state.searchPartRes.forEach(result => {
+            _results.push({
+              fieldValue: result[`${fieldName}`],
+              DDerniereReunion: result['DDerniereReunion'],
+              SPWebUrl: result['SPWebUrl'],
+              listName: `${cType}`,
+              fieldName: `${fieldName}`
+            });
+          });
+          this.setState({
+            searchPartRes: []
+          })
+          resolve(_results);
+        } else {
+          this.searchBilan(cType, dStart, dEnd, nexstartRow, pageSize, fieldName);
+        }
+      })
+        .catch((ex) => {
+          console.error(ex);
+          reject(ex);
+        });
+    })
+  }
 
+  public searchSuiviRelecture(cType: string, fieldName: string, dStart: string, dEnd: string, row: number, pageSize: number): Promise<any> {
+    let _results: ISearchRes[] = [];
+    return new Promise((resolve, reject) => {
+      const q =
+        SearchQueryBuilder(`ContentTypeID:"${cType}"`)
+          .selectProperties(`${fieldName}`, 'Created', 'SPWebUrl')
+          .refinementFilters(`Created:range(${dStart}, ${dEnd})`)
+          .startRow(row)
+          .rowLimit(pageSize)
+      sp.search(q).then((data) => {
+        let totalRows = data.TotalRows
+        this.setState(prevState => ({ searchPartRes: prevState.searchPartRes.concat(data.PrimarySearchResults) }));
+        let nexstartRow = row + pageSize
+        if (totalRows < nexstartRow) {
+          this.state.searchPartRes.forEach(result => {
+            _results.push({
+              fieldValue: result[`${fieldName}`],
+              DCreation: result['Created'],
+              SPWebUrl: result['SPWebUrl'],
+              listName: `${cType}`,
+              fieldName: `${fieldName}`
+            });
+          });
+          this.setState({
+            searchPartRes: []
+          })
+          resolve(_results);
+        } else {
+          this.searchSuiviRelecture(cType, fieldName, dStart, dEnd, nexstartRow, pageSize)
+        }
+      })
+        .catch((ex) => {
+          console.error(ex);
+          reject(ex);
+        });
+    })
+  }
+
+  public searchMissions(cType: string, fieldName: string, dStart: string, dEnd: string, row: number, pageSize: number): Promise<any> {
+    let _results: ISearchRes[] = [];
+    return new Promise((resolve, reject) => {
+      const q =
+        SearchQueryBuilder(`ContentTypeID:"${cType}"`)
+          .selectProperties('Année', 'Produit', 'NumMission0', 'Equipe', 'Client', 'Sortie', 'SPWebUrl')
+          .refinementFilters(`Sortie:range(${dStart}, ${dEnd})`)
+          .startRow(row)
+          .rowLimit(pageSize)
+      sp.search(q).then((data) => {
+        this.setState(prevState => ({ searchPartRes: prevState.searchPartRes.concat(data.PrimarySearchResults) }));
+        let totalRows = data.TotalRows
+        let nexstartRow = row + pageSize
+        console.log('nexstartRow', nexstartRow);
+        if (totalRows < nexstartRow) {
+          this.state.searchPartRes.forEach(result => {
+            console.log('result', result)
+            _results.push({
+              fieldValue: result[`${fieldName}`],
+              SPWebUrl: result['SPWebUrl'],
+              listName: `${cType}`,
+              fieldName: `${fieldName}`,
+              Sortie: result['Sortie'],
+              Annee: result['Année'],
+              Produit: result['Produit'],
+              NumMission: result['NumMission0'],
+              Equipe: result['Equipe'],
+              Client: result['Client'],
+            });
+          });
+          this.setState({
+            searchPartRes: []
+          })
+          resolve(_results);
+        } else {
+          this.searchMissions(cType, fieldName, dStart, dEnd, nexstartRow, pageSize)
+        }
+      })
+        .catch((ex) => {
+          console.error(ex);
+          reject(ex);
+        });
+    })
+  }
+  //data for exel export
   Listdata = () => {
-    let resultBilan: ISearchResult[] = [];
-    let resultSuivi: ISearchResult[] = [];
-    let resultMision: ISearchResult[] = [];
+    let resultBilan: ISearchRes[] = [];
+    let resultSuivi: ISearchRes[] = [];
+    let resultMision: ISearchRes[] = [];
     this.state.totalSearchBilan.forEach(element => {
 
       resultBilan.push({
@@ -134,10 +247,8 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
       });
     });
 
-    function getRelative(resultMision: ISearchResult[], resultItems: ISearchResult[]) {
-      console.log('resultMision', resultMision);
-      console.log('resultItems', resultItems);
-
+    //mapping missions with Bilan and Suivi
+    function getRelative(resultMision: ISearchRes[], resultItems: ISearchRes[]) {
       return resultItems.map(function (o1) {
         return resultMision.some(function (o2) {
           if (o2.NumMission) {
@@ -166,12 +277,10 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     }
     getRelative(resultMision, resultBilan);
     getRelative(resultMision, resultSuivi);
-    console.log('resultBilan', resultBilan)
-    console.log('resultSuivi', resultSuivi)
     saveExcel(resultBilan, resultSuivi, resultMision);
   }
 
-  hasBlanMission = (searchResults: ISearchResult[], serchSuinvi: ISearchResult[]): ISearchResult[] => {
+  hasBlanMission = (searchResults: ISearchRes[], serchSuinvi: ISearchRes[]): ISearchRes[] => {
     return serchSuinvi.filter(function (o1) {
       return searchResults.some(function (o2) {
         let urlSuivni = o1.SPWebUrl.split('/');
@@ -183,7 +292,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     });
   }
 
-  getMinMaxDate = (searchResults: ISearchResult[], dField: string) => {
+  getMinMaxDate = (searchResults: ISearchRes[], dField: string) => {
     let rangeDate = {
       maxDate: '',
       minDate: ''
@@ -197,8 +306,8 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     rangeDate.minDate = moment(searchResults[minIdx][dField]).subtract(1, 'M').format('YYYY-MM-DD');
     return rangeDate
   }
-
-  getPercent = (searchResults: ISearchResult[]) => {
+  //Billan
+  getPercent = (searchResults: ISearchRes[]) => {
     let countYes = 0;
     let countNo = 0;
     let listName;
@@ -227,7 +336,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     }
   }
 
-  hasBlanMissionSite = (searchResults: ISearchResult[], searchMission: ISearchMissions[]): ISearchResult[] => {
+  hasBlanMissionSite = (searchResults: ISearchRes[], searchMission: ISearchRes[]): ISearchRes[] => {
     return searchMission.filter(function (o1) {
       return searchResults.some(function (o2) {
         if (o1.NumMission) {
@@ -241,7 +350,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     });
   }
 
-  getPercentMission = (searchResults: ISearchResult[], searchMission: ISearchMissions[]) => {
+  getPercentMission = (searchResults: ISearchRes[], searchMission: ISearchRes[]) => {
     let listName;
     let fieldName;
     let result = searchMission.filter(function (o1) {
@@ -264,12 +373,8 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
       countYes: Math.round((100 * result.length) / (result.length + (searchMission.length - result.length))),
       countNo: Math.round((100 * (searchMission.length - result.length)) / (result.length + (searchMission.length - result.length))),
     }
+    this.setState(prevState => ({ sortedResult: prevState.sortedResult.concat(arrayItem) }));
 
-    let { sortedResult } = this.state;
-    sortedResult.push(arrayItem);
-    this.setState({
-      sortedResult: sortedResult
-    })
   }
 
   public render(): React.ReactElement<ISecafiIndicateursEtccProps> {
@@ -304,7 +409,6 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
         <DefaultButton id="Refresh" onClick={this.GetData} text="Refresh data" allowDisabledFocus />
         <div className={styles.row}>
           {this.state.sortedResult.map((val) => {
-            //console.log('map sortedResult ', this.state.sortedResult)
             return (
               <ChartControl
                 type={ChartType.Bar}

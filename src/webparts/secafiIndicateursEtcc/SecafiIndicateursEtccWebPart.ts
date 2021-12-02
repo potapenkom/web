@@ -6,7 +6,7 @@ import {
 } from '@microsoft/sp-property-pane';
 import { PropertyFieldCollectionData, CustomCollectionFieldType } from '@pnp/spfx-property-controls/lib/PropertyFieldCollectionData';
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
-import pnp, { SearchResults, SearchQuery, SearchQueryBuilder } from "sp-pnp-js";
+import { sp } from '@pnp/sp';
 import * as strings from 'SecafiIndicateursEtccWebPartStrings';
 import SecafiIndicateursEtcc from './components/SecafiIndicateursEtcc';
 import { ISecafiIndicateursEtccProps } from './components/ISecafiIndicateursEtccProps';
@@ -16,7 +16,7 @@ export interface ISecafiIndicateursEtccWebPartProps {
   collectionData: any[];
 }
 
-export interface ISearchResult {
+export interface ISearchRes {
   listName: string;
   fieldName: string;
   fieldValue?: string;
@@ -31,160 +31,14 @@ export interface ISearchResult {
   Client?: string;
 }
 
-export interface ISearchBilan extends ISearchResult {
-  DDerniereReunion: Date;
-}
-
-export interface ISearchSuivi extends ISearchResult {
-  DCreation: Date
-}
-
-export interface ISearchMissions extends ISearchResult {
-  Sortie: Date;
-  Annee: string;
-  Produit: string;
-  NumMission: string;
-  Equipe: string;
-  Client: string;
-}
-
-export function getBilan(cType: string, dStart: string, dEnd: string, fieldName?: string): Promise<any> {
-  const _results: ISearchBilan[] = [];
-  return new Promise((resolve, reject) => {
-    pnp.sp.search(<SearchQuery>{
-      Querytext: `ContentTypeID:"0x0100E297556C5DCE1F428F2CCB8A9A2609F6*"`,
-      RowLimit: 9999,
-      SelectProperties: ['DDerniereReunion', 'SPWebUrl', `${fieldName}`],
-      RefinementFilters: [`DDerniereReunion:range(${dStart},${dEnd})`]
-    }).then((r: SearchResults) => {
-      r.PrimarySearchResults.forEach(result => {
-        _results.push({
-          fieldValue: result[`${fieldName}`],
-          DDerniereReunion: result['DDerniereReunion'],
-          SPWebUrl: result['SPWebUrl'],
-          listName: `${cType}`,
-          fieldName: `${fieldName}`
-        });
-      })
-      resolve(_results);
-    })
-      .catch((ex) => {
-        console.error(ex);
-        reject(ex);
-      });
-  });
-}
-
-export function getSuiviRelecture(cType: string, fieldName: string, dStart: string, dEnd: string): Promise<any> {
-  const _results: ISearchSuivi[] = [];
-  return new Promise((resolve, reject) => {
-    pnp.sp.search(<SearchQuery>{
-      Querytext: `ContentTypeID:"${cType}"`,
-      RowLimit: 9999,
-      SelectProperties: [`${fieldName}`, 'Created', 'SPWebUrl'],
-      RefinementFilters: [`Created:range(${dStart}, ${dEnd})`]
-    }).then((r: SearchResults) => {
-      r.PrimarySearchResults.forEach(result => {
-        _results.push({
-          fieldValue: result[`${fieldName}`],
-          DCreation: result['Created'],
-          SPWebUrl: result['SPWebUrl'],
-          listName: `${cType}`,
-          fieldName: `${fieldName}`
-        });
-      })
-      resolve(_results);
-    })
-      .catch((ex) => {
-        console.error(ex);
-        reject(ex);
-      });
-  });
-}
-
-export function getMissions(cType: string, fieldName: string, dStart: string, dEnd: string): Promise<any> {
-  const _results: ISearchMissions[] = [];
-  return new Promise((resolve, reject) => {
-    pnp.sp.search(<SearchQuery>{
-      Querytext: `ContentTypeID:"${cType}"`,
-      RowLimit: 9999,
-      SelectProperties: ['Année', 'Produit', 'NumMission0', 'Equipe', 'Client', 'Sortie', 'SPWebUrl'],
-      RefinementFilters: [`Sortie:range(${dStart}, ${dEnd})`],
-    }).then((r: SearchResults) => {
-      let totalRows: number = r.TotalRows;
-      let pageSize: number = 500
-      r.PrimarySearchResults.forEach(result => {
-        _results.push({
-          fieldValue: result[`${fieldName}`],
-          SPWebUrl: result['SPWebUrl'],
-          listName: `${cType}`,
-          fieldName: `${fieldName}`,
-          Sortie: result['Sortie'],
-          Annee: result['Année'],
-          Produit: result['Produit'],
-          NumMission: result['NumMission0'],
-          Equipe: result['Equipe'],
-          Client: result['Client'],
-        });
-      })
-      resolve(_results);
-    })
-      .catch((ex) => {
-        console.error(ex);
-        reject(ex);
-      });
-  });
-}
-
-export function getFullMissions(cType: string, fieldName: string, dStart: string, dEnd: string): Promise<any> {
-  const _results: ISearchMissions[] = [];
-  return new Promise((resolve, reject) => {
-    function startSearch(page: number = 0, rowLimit = 500) {
-      pnp.sp.search(<SearchQuery>{
-        Querytext: `ContentTypeID:"${cType}"`,
-        StartRow: page,
-        RowLimit: rowLimit,
-        SelectProperties: ['Année', 'Produit', 'NumMission0', 'Equipe', 'Client', 'Sortie', 'SPWebUrl'],
-        // RefinementFilters: [`Sortie:range(${dStart}, ${dEnd})`],
-      }).then((r: SearchResults) => {
-        let totalRows: number = r.TotalRows;
-        console.log('totalRows', totalRows);
-        let pageSize: number = rowLimit
-        r.PrimarySearchResults.forEach(result => {
-          _results.push({
-            fieldValue: result[`${fieldName}`],
-            SPWebUrl: result['SPWebUrl'],
-            listName: `${cType}`,
-            fieldName: `${fieldName}`,
-            Sortie: result['Sortie'],
-            Annee: result['Année'],
-            Produit: result['Produit'],
-            NumMission: result['NumMission0'],
-            Equipe: result['Equipe'],
-            Client: result['Client'],
-          });
-        })
-        if (totalRows < pageSize) {
-          resolve(_results);
-        } else{
-          console.log('pageSize',pageSize)
-          page = 1 
-          let startRow = page * pageSize
-          console.log('startRow',startRow)
-          this.startSearch(startRow, pageSize)
-          ++page
-        }
-      })
-        .catch((ex) => {
-          console.error(ex);
-          reject(ex);
-        });
-    }
-  });
-}
-
 export default class SecafiIndicateursEtccWebPart extends BaseClientSideWebPart<ISecafiIndicateursEtccWebPartProps> {
-
+public onInit(): Promise<void> {
+    return super.onInit().then(_ => {
+      sp.setup({
+        spfxContext: this.context
+      });
+    });
+  }
   public render(): void {
     const element: React.ReactElement<ISecafiIndicateursEtccProps> = React.createElement(
       SecafiIndicateursEtcc,
