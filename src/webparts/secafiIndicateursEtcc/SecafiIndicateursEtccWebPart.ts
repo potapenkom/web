@@ -65,14 +65,14 @@ export default class SecafiIndicateursEtccWebPart extends BaseClientSideWebPart<
                   value: this.properties.collectionData,
                   fields: [
                     {
-                      id: this.properties.description,
-                      title: this.properties.listTitle,
+                      id: strings.listId,
+                      title: strings.listTitle,
                       type: CustomCollectionFieldType.string,
                       required: true
                     },
                     {
-                      id: this.properties.fieldId,
-                      title: this.properties.fieldTitle,
+                      id: strings.fieldId,
+                      title: strings.fieldTitle,
                       type: CustomCollectionFieldType.string,
                       required: true
                     },

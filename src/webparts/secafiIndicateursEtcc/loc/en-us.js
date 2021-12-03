@@ -1,6 +1,6 @@
 define([], function() {
   return {
-    "PropertyPaneDescription": "Description my panel",
+    "PropertyPaneDescription": "Description Secafi_indicateurs_ETCC",
     "BasicGroupName": "Group Name",
     "DescriptionFieldLabel": "Description Field",
     "fieldId":"fieldId",
