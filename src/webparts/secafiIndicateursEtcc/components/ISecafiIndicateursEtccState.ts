@@ -1,5 +1,4 @@
 import {  ISearchResult } from "@pnp/sp/presets/all";
-import { ISearchRes} from '../SecafiIndicateursEtccWebPart'
 export interface ISecafiIndicateursEtccState {
   searchResults: ISearchRes[];
   searchPartRes : ISearchResult[]
@@ -11,5 +10,21 @@ export interface ISecafiIndicateursEtccState {
   startDate: Date;
   endDate: Date;
 }
+
+export interface ISearchRes {
+  listName: string;
+  fieldName: string;
+  fieldValue?: string;
+  SPWebUrl?: string;
+  DDerniereReunion?: Date;
+  DCreation?: Date;
+  Sortie?: Date;
+  Annee?: string;
+  Produit?: string;
+  NumMission?: string;
+  Equipe?: string;
+  Client?: string;
+}
+
 
 

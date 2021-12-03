@@ -9,30 +9,12 @@ import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import { sp } from '@pnp/sp';
 import * as strings from 'SecafiIndicateursEtccWebPartStrings';
 import SecafiIndicateursEtcc from './components/SecafiIndicateursEtcc';
-import { ISecafiIndicateursEtccProps } from './components/ISecafiIndicateursEtccProps';
+import { ISecafiIndicateursEtccProps, ISecafiIndicateursEtccWebPartProps } from './components/ISecafiIndicateursEtccProps';
 
-export interface ISecafiIndicateursEtccWebPartProps {
-  description: string;
-  collectionData: any[];
-}
 
-export interface ISearchRes {
-  listName: string;
-  fieldName: string;
-  fieldValue?: string;
-  SPWebUrl?: string;
-  DDerniereReunion?: Date;
-  DCreation?: Date;
-  Sortie?: Date;
-  Annee?: string;
-  Produit?: string;
-  NumMission?: string;
-  Equipe?: string;
-  Client?: string;
-}
 
 export default class SecafiIndicateursEtccWebPart extends BaseClientSideWebPart<ISecafiIndicateursEtccWebPartProps> {
-public onInit(): Promise<void> {
+  public onInit(): Promise<void> {
     return super.onInit().then(_ => {
       sp.setup({
         spfxContext: this.context
@@ -45,7 +27,11 @@ public onInit(): Promise<void> {
       {
         description: this.properties.description,
         collectionData: this.properties.collectionData,
-        context: this.context
+        context: this.context,
+        fieldId: this.properties.fieldId,
+        fieldTitle: this.properties.fieldTitle,
+        listId: this.properties.listId,
+        listTitle:this.properties.listTitle
       }
     );
 
@@ -79,14 +65,14 @@ public onInit(): Promise<void> {
                   value: this.properties.collectionData,
                   fields: [
                     {
-                      id: "listId",
-                      title: "Content Type ID",
+                      id: this.properties.description,
+                      title: this.properties.listTitle,
                       type: CustomCollectionFieldType.string,
                       required: true
                     },
                     {
-                      id: "fieldId",
-                      title: "Column internal name",
+                      id: this.properties.fieldId,
+                      title: this.properties.fieldTitle,
                       type: CustomCollectionFieldType.string,
                       required: true
                     },
