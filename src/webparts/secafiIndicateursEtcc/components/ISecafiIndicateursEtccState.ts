@@ -1,12 +1,12 @@
 import {  ISearchResult } from "@pnp/sp/presets/all";
 export interface ISecafiIndicateursEtccState {
   searchResults: ISearchRes[];
-  searchPartRes : ISearchResult[]
+  searchPartRes : ISearchResult[];
   sortedResult: any[];
   totalSearch: any[];
-  totalSearchBilan: any[],
-  totalSearchSuivi: any[],
-  totalSearchMissions: any[],
+  totalSearchBilan: any[];
+  totalSearchSuivi: any[];
+  totalSearchMissions: any[];
   startDate: Date;
   endDate: Date;
 }

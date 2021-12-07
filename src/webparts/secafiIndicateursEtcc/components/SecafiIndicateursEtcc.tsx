@@ -4,7 +4,7 @@ import { ISecafiIndicateursEtccProps } from './ISecafiIndicateursEtccProps';
 
 import { ISecafiIndicateursEtccState, ISearchRes } from './ISecafiIndicateursEtccState';
 import { ChartControl, ChartType } from '@pnp/spfx-controls-react/lib/ChartControl';
-import * as moment from 'moment'
+import * as moment from 'moment';
 import {
   DatePicker,
   defaultDatePickerStrings,
@@ -21,24 +21,24 @@ const fileExtension = '.xlsx';
 let Heading1 = [["List name", "Field Name", "Field Value", "Année", "Produit", "Num mission", "Equipe", "Client", "Sortie de rapport"], []];
 const saveExcel = (ListData, list1?, list2?) => {
   if (ListData.length > 0) {
-    const ws = XLSX.utils.book_new();
+    let ws = XLSX.utils.book_new();
     XLSX.utils.sheet_add_aoa(ws, Heading1);
     XLSX.utils.sheet_add_json(ws, ListData, { origin: 'A2', skipHeader: true });
     const wb = { Sheets: { 'Bilan_de_mission': ws }, SheetNames: ['Bilan_de_mission'] };
     if (list1.length > 0) {
-      const ws = XLSX.utils.json_to_sheet(list1);
-      XLSX.utils.sheet_add_aoa(ws, Heading1);
-      XLSX.utils.book_append_sheet(wb, ws, "Suivi_de_relecture");
+      let ws1 = XLSX.utils.json_to_sheet(list1);
+      XLSX.utils.sheet_add_aoa(ws1, Heading1);
+      XLSX.utils.book_append_sheet(wb, ws1, "Suivi_de_relecture");
     }
     if (list2.length > 0) {
-      const ws = XLSX.utils.json_to_sheet(list2);
-      XLSX.utils.book_append_sheet(wb, ws, "Missions");
+      let ws1 = XLSX.utils.json_to_sheet(list2);
+      XLSX.utils.book_append_sheet(wb, ws1, "Missions");
     }
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const data = new Blob([excelBuffer], { type: fileType });
     saveAs(data, 'Data' + fileExtension);
   }
-}
+};
 
 export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndicateursEtccProps, ISecafiIndicateursEtccState> {
   constructor(props) {
@@ -68,18 +68,19 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     });
     let start = moment(this.state.startDate).format('YYYY-MM-DD');
     let end = moment(this.state.endDate).format('YYYY-MM-DD');
-    this.props.collectionData && this.props.collectionData.map(async (val) => {
+    let result = this.props.collectionData && this.props.collectionData.map(async (val) => {
       if (val.listId === "0x0100E297556C5DCE1F428F2CCB8A9A2609F6*") {
         let searchResults: ISearchRes[] = await this.searchBilan(val.listId, start, end, 0, 500, val.fieldId,);
-        this.setState(prevState => ({ totalSearchBilan: prevState.totalSearchBilan.concat(searchResults) }))
+        this.setState(prevState => ({ totalSearchBilan: prevState.totalSearchBilan.concat(searchResults) }));
         this.getPercent(searchResults);
       }
       if (val.listId === "0x01002229A785DC4FB442A6ABC3C478C38232*") {
         let searchResults: ISearchRes[] = await this.searchBilan('0x0100E297556C5DCE1F428F2CCB8A9A2609F6*', start, end, 0, 500);
         let serchSuinvi: ISearchRes[] = await this.searchSuiviRelecture(val.listId, val.fieldId, this.getMinMaxDate(searchResults, 'DDerniereReunion').minDate, this.getMinMaxDate(searchResults, 'DDerniereReunion').maxDate, 0, 500);
-        this.setState(prevState => ({ totalSearchSuivi: prevState.totalSearchSuivi.concat(serchSuinvi) }))
+        this.setState(prevState => ({ totalSearchSuivi: prevState.totalSearchSuivi.concat(serchSuinvi) }));
         this.getPercent(this.hasBlanMission(searchResults, serchSuinvi));
       }
+
       if (val.listId === "0x010030F4365A045058449B6D5A1086834EB3007DA7964A5C6CE1479A322590C25A1CA5") {
         let maxDate = moment(start).subtract(1, 'M').format('YYYY-MM-DD');
         let minDate = moment(end).add(1, 'M').format('YYYY-MM-DD');
@@ -88,7 +89,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
         this.setState(prevState => ({ totalSearchMissions: prevState.totalSearchMissions.concat(this.hasBlanMissionSite(searchResults, searchMission)) }));
         this.getPercentMission(searchResults, searchMission);
       }
-    })
+    });
   }
 
   //search Bilan_de_mission by ContentTypeID
@@ -100,11 +101,11 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
           .selectProperties('DDerniereReunion', 'SPWebUrl', `${fieldName}`)
           .refinementFilters(`DDerniereReunion:range(${dStart},${dEnd})`)
           .startRow(row)
-          .rowLimit(pageSize)
+          .rowLimit(pageSize);
       sp.search(q).then((data) => {
         this.setState(prevState => ({ searchPartRes: prevState.searchPartRes.concat(data.PrimarySearchResults) }));
-        let totalRows = data.TotalRows
-        let nexstartRow = row + pageSize
+        let totalRows = data.TotalRows;
+        let nexstartRow = row + pageSize;
         if (totalRows < nexstartRow) {
           this.state.searchPartRes.forEach(result => {
             _results.push({
@@ -117,7 +118,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
           });
           this.setState({
             searchPartRes: []
-          })
+          });
           resolve(_results);
         } else {
           this.searchBilan(cType, dStart, dEnd, nexstartRow, pageSize, fieldName);
@@ -127,7 +128,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
           console.error(ex);
           reject(ex);
         });
-    })
+    });
   }
   //search Suivi_de_relecture_par_relecteur by ContentTypeID
   public searchSuiviRelecture(cType: string, fieldName: string, dStart: string, dEnd: string, row: number, pageSize: number): Promise<any> {
@@ -138,11 +139,11 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
           .selectProperties(`${fieldName}`, 'Created', 'SPWebUrl')
           .refinementFilters(`Created:range(${dStart}, ${dEnd})`)
           .startRow(row)
-          .rowLimit(pageSize)
+          .rowLimit(pageSize);
       sp.search(q).then((data) => {
-        let totalRows = data.TotalRows
+        let totalRows = data.TotalRows;
         this.setState(prevState => ({ searchPartRes: prevState.searchPartRes.concat(data.PrimarySearchResults) }));
-        let nexstartRow = row + pageSize
+        let nexstartRow = row + pageSize;
         if (totalRows < nexstartRow) {
           this.state.searchPartRes.forEach(result => {
             _results.push({
@@ -155,17 +156,17 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
           });
           this.setState({
             searchPartRes: []
-          })
+          });
           resolve(_results);
         } else {
-          this.searchSuiviRelecture(cType, fieldName, dStart, dEnd, nexstartRow, pageSize)
+          this.searchSuiviRelecture(cType, fieldName, dStart, dEnd, nexstartRow, pageSize);
         }
       })
         .catch((ex) => {
           console.error(ex);
           reject(ex);
         });
-    })
+    });
   }
 
   // search Missions by ContentTypeID
@@ -177,11 +178,11 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
           .selectProperties('Année', 'Produit', 'NumMission0', 'Equipe', 'Client', 'Sortie', 'SPWebUrl')
           .refinementFilters(`Sortie:range(${dStart}, ${dEnd})`)
           .startRow(row)
-          .rowLimit(pageSize)
+          .rowLimit(pageSize);
       sp.search(q).then((data) => {
         this.setState(prevState => ({ searchPartRes: prevState.searchPartRes.concat(data.PrimarySearchResults) }));
-        let totalRows = data.TotalRows
-        let nexstartRow = row + pageSize
+        let totalRows = data.TotalRows;
+        let nexstartRow = row + pageSize;
         if (totalRows < nexstartRow) {
           this.state.searchPartRes.forEach(result => {
             _results.push({
@@ -197,24 +198,24 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
               Client: result['Client'],
             });
           });
-          console.log('_results',_results)
+          console.log('_results', _results);
           resolve(_results);
           this.setState({
             searchPartRes: []
-          })
+          });
         } else {
-          this.searchMissions(cType, fieldName, dStart, dEnd, nexstartRow, pageSize)
+          this.searchMissions(cType, fieldName, dStart, dEnd, nexstartRow, pageSize);
         }
       })
         .catch((ex) => {
           console.error(ex);
           reject(ex);
         });
-    })
+    });
   }
 
   //data for exel export
-  Listdata = () => {
+  public Listdata = () => {
     let resultBilan: ISearchRes[] = [];
     let resultSuivi: ISearchRes[] = [];
     let resultMision: ISearchRes[] = [];
@@ -226,7 +227,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
         fieldValue: element['fieldValue'],
         SPWebUrl: element['SPWebUrl']
       });
-    })
+    });
     this.state.totalSearchSuivi.forEach(element => {
       resultSuivi.push({
         listName: this.decoderCType(element['listName']),
@@ -234,7 +235,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
         fieldValue: element['fieldValue'],
         SPWebUrl: element['SPWebUrl']
       });
-    })
+    });
     this.state.totalSearchMissions.forEach(element => {
       resultMision.push({
         listName: this.decoderCType(element['listName']),
@@ -249,9 +250,9 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     });
 
     //mapping Missions with Bilan_de_mission and Suivi_de_relecture_par_relecteur for export exel
-    function getRelative(resultMision: ISearchRes[], resultItems: ISearchRes[]) {
-      return resultItems.map(function (o1) {
-        return resultMision.some(function (o2) {
+    let getRelative = (resultMission: ISearchRes[], resultItems: ISearchRes[]) => {
+      return resultItems.map(o1 => {
+        return resultMission.some(o2 => {
           if (o2.NumMission) {
             var re = /-/gi;
             var NumMission = o2.NumMission.replace(re, "");
@@ -268,22 +269,22 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
                 Equipe: o2['Equipe'],
                 Client: o2['Client'],
                 Sortie: o2['Sortie']
-              })
+              });
             }
             delete o1.SPWebUrl;
           }
         });
       });
-    }
+    };
     getRelative(resultMision, resultBilan);
     getRelative(resultMision, resultSuivi);
     saveExcel(resultBilan, resultSuivi, resultMision);
   }
 
   //mapping Bilan_de_mission with Suivi_de_relecture_par_relecteur
-  hasBlanMission = (searchResults: ISearchRes[], serchSuinvi: ISearchRes[]): ISearchRes[] => {
-    return serchSuinvi.filter(function (o1) {
-      return searchResults.some(function (o2) {
+  private hasBlanMission = (searchResults: ISearchRes[], serchSuinvi: ISearchRes[]): ISearchRes[] => {
+    return serchSuinvi.filter(o1 => {
+      return searchResults.some(o2 => {
         let urlSuivni = o1.SPWebUrl.split('/');
         let urlBilan = o2.SPWebUrl.split('/');
         let numSuivni = urlSuivni.pop() || urlSuivni.pop();
@@ -294,11 +295,11 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
   }
 
   //Get dates for search Suivi_de_relecture_par_relecteur
-  getMinMaxDate = (searchResults: ISearchRes[], dField: string) => {
+  private getMinMaxDate = (searchResults: ISearchRes[], dField: string) => {
     let rangeDate = {
       maxDate: '',
       minDate: ''
-    }
+    };
     var minIdx = 0, maxIdx = 0;
     for (var i = 0; i < searchResults.length; i++) {
       if (searchResults[i][dField] > searchResults[maxIdx][dField]) maxIdx = i;
@@ -306,18 +307,18 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     }
     rangeDate.maxDate = moment(searchResults[maxIdx][dField]).add(1, 'M').format('YYYY-MM-DD');
     rangeDate.minDate = moment(searchResults[minIdx][dField]).subtract(1, 'M').format('YYYY-MM-DD');
-    return rangeDate
+    return rangeDate;
   }
 
   //get Percent for Bilan_de_mission and Suivi_de_relecture_par_relecteur
-  getPercent = (searchResults: ISearchRes[]) => {
+  private getPercent = (searchResults: ISearchRes[]) => {
     let countYes = 0;
     let countNo = 0;
     let listName;
     let fieldName;
     searchResults.forEach(element => {
       listName = element.listName;
-      fieldName = element.fieldName
+      fieldName = element.fieldName;
       if (element.fieldValue === "true" || element.fieldValue === "True\n\n1" || element.fieldValue === "OK" || element.fieldValue === "Oui") {
         countYes += 1;
       } else if (element.fieldValue === "false" || element.fieldValue === "False\n\n0" || element.fieldValue === "AR" || element.fieldValue === "Non") {
@@ -330,19 +331,19 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
         fieldId: fieldName,
         countYes: Math.round((100 * countYes) / (countYes + countNo)),
         countNo: Math.round((100 * countNo) / (countYes + countNo)),
-      }
+      };
       let { sortedResult } = this.state;
       sortedResult.push(arrayItem);
       this.setState({
         sortedResult: sortedResult
-      })
+      });
     }
   }
 
   //Chech has Miission Bilan_de_mission
-  hasBlanMissionSite = (searchResults: ISearchRes[], searchMission: ISearchRes[]): ISearchRes[] => {
-    return searchMission.filter(function (o1) {
-      return searchResults.some(function (o2) {
+  private hasBlanMissionSite = (searchResults: ISearchRes[], searchMission: ISearchRes[]): ISearchRes[] => {
+    return searchMission.filter(o1 => {
+      return searchResults.some(o2 => {
         if (o1.NumMission) {
           var re = /-/gi;
           var NumMission = o1.NumMission.replace(re, "");
@@ -355,13 +356,13 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
   }
 
   //get Percent for Missions with Bilan_de_mission
-  getPercentMission = (searchResults: ISearchRes[], searchMission: ISearchRes[]) => {
+  private getPercentMission = (searchResults: ISearchRes[], searchMission: ISearchRes[]) => {
     let listName;
     let fieldName;
-    let result = searchMission.filter(function (o1) {
+    let result = searchMission.filter(o1 => {
       listName = o1.listName;
       fieldName = o1.fieldName;
-      return searchResults.some(function (o2) {
+      return searchResults.some(o2 => {
         if (o1.NumMission) {
           var re = /-/gi;
           var NumMission = o1.NumMission.replace(re, "");
@@ -377,7 +378,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
 
       countYes: Math.round((100 * result.length) / (result.length + (searchMission.length - result.length))),
       countNo: Math.round((100 * (searchMission.length - result.length)) / (result.length + (searchMission.length - result.length))),
-    }
+    };
     this.setState(prevState => ({ sortedResult: prevState.sortedResult.concat(arrayItem) }));
 
   }
@@ -431,9 +432,9 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     );
   }
 
-//for display content type name
-  decoderCType = (id: string) => {
-    let cType: string
+  //for display content type name
+  private decoderCType = (id: string) => {
+    let cType: string;
     switch (id) {
       case "0x010030F4365A045058449B6D5A1086834EB3007DA7964A5C6CE1479A322590C25A1CA5": {
         cType = "Mission";
@@ -451,12 +452,12 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
         break;
       }
     }
-    return cType
+    return cType;
   }
 
-//for display field name
-  decoderField = (field: string) => {
-    let fName: string
+  //for display field name
+  private decoderField = (field: string) => {
+    let fName: string;
     switch (field) {
       case "Recommandations": {
         fName = "Recommandations (rapport)";
@@ -487,6 +488,6 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
       }
 
     }
-    return fName
+    return fName;
   }
 }
