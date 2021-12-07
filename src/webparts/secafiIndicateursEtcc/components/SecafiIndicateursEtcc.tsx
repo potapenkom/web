@@ -15,30 +15,8 @@ import '@pnp/sp/search';
 import { DefaultButton } from '@fluentui/react/lib/Button';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import * as strings from 'SecafiIndicateursEtccWebPartStrings';
 
-const fileType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8';
-const fileExtension = '.xlsx';
-let Heading1 = [["List name", "Field Name", "Field Value", "Année", "Produit", "Num mission", "Equipe", "Client", "Sortie de rapport"], []];
-const saveExcel = (ListData, list1?, list2?) => {
-  if (ListData.length > 0) {
-    let ws = XLSX.utils.book_new();
-    XLSX.utils.sheet_add_aoa(ws, Heading1);
-    XLSX.utils.sheet_add_json(ws, ListData, { origin: 'A2', skipHeader: true });
-    const wb = { Sheets: { 'Bilan_de_mission': ws }, SheetNames: ['Bilan_de_mission'] };
-    if (list1.length > 0) {
-      let ws1 = XLSX.utils.json_to_sheet(list1);
-      XLSX.utils.sheet_add_aoa(ws1, Heading1);
-      XLSX.utils.book_append_sheet(wb, ws1, "Suivi_de_relecture");
-    }
-    if (list2.length > 0) {
-      let ws1 = XLSX.utils.json_to_sheet(list2);
-      XLSX.utils.book_append_sheet(wb, ws1, "Missions");
-    }
-    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const data = new Blob([excelBuffer], { type: fileType });
-    saveAs(data, 'Data' + fileExtension);
-  }
-};
 
 export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndicateursEtccProps, ISecafiIndicateursEtccState> {
   constructor(props) {
@@ -51,23 +29,23 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
       totalSearchBilan: [],
       totalSearchSuivi: [],
       totalSearchMissions: [],
-      startDate: new Date('01-01-2021'),
-      endDate: new Date('12-31-2021'),
+      startDate: new Date(new Date().getFullYear(), 0, 1),
+      endDate: new Date(new Date().getFullYear(), 11, 31),
     };
-    this.GetData = this.GetData.bind(this);
+    this.getData = this.getData.bind(this);
   }
 
   public componentDidMount(): void {
-    this.GetData();
+    this.getData();
   }
 
-  public GetData(): void {
+  public getData(): void {
     this.setState({
       sortedResult: [],
       totalSearch: []
     });
-    let start = moment(this.state.startDate).format('YYYY-MM-DD');
-    let end = moment(this.state.endDate).format('YYYY-MM-DD');
+    let start: string = moment(this.state.startDate).format('YYYY-MM-DD');
+    let end: string = moment(this.state.endDate).format('YYYY-MM-DD');
     let result = this.props.collectionData && this.props.collectionData.map(async (val) => {
       if (val.listId === "0x0100E297556C5DCE1F428F2CCB8A9A2609F6*") {
         let searchResults: ISearchRes[] = await this.searchBilan(val.listId, start, end, 0, 500, val.fieldId,);
@@ -82,8 +60,8 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
       }
 
       if (val.listId === "0x010030F4365A045058449B6D5A1086834EB3007DA7964A5C6CE1479A322590C25A1CA5") {
-        let maxDate = moment(start).subtract(1, 'M').format('YYYY-MM-DD');
-        let minDate = moment(end).add(1, 'M').format('YYYY-MM-DD');
+        let maxDate: string = moment(start).subtract(1, 'M').format('YYYY-MM-DD');
+        let minDate: string = moment(end).add(1, 'M').format('YYYY-MM-DD');
         let searchResults: ISearchRes[] = await this.searchBilan('0x0100E297556C5DCE1F428F2CCB8A9A2609F6*', start, end, 0, 500);
         let searchMission: ISearchRes[] = await this.searchMissions(val.listId, val.fieldId, maxDate, minDate, 0, 500);
         this.setState(prevState => ({ totalSearchMissions: prevState.totalSearchMissions.concat(this.hasBlanMissionSite(searchResults, searchMission)) }));
@@ -104,8 +82,8 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
           .rowLimit(pageSize);
       sp.search(q).then((data) => {
         this.setState(prevState => ({ searchPartRes: prevState.searchPartRes.concat(data.PrimarySearchResults) }));
-        let totalRows = data.TotalRows;
-        let nexstartRow = row + pageSize;
+        let totalRows: number = data.TotalRows;
+        let nexstartRow: number = row + pageSize;
         if (totalRows < nexstartRow) {
           this.state.searchPartRes.forEach(result => {
             _results.push({
@@ -141,9 +119,9 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
           .startRow(row)
           .rowLimit(pageSize);
       sp.search(q).then((data) => {
-        let totalRows = data.TotalRows;
+        let totalRows: number = data.TotalRows;
         this.setState(prevState => ({ searchPartRes: prevState.searchPartRes.concat(data.PrimarySearchResults) }));
-        let nexstartRow = row + pageSize;
+        let nexstartRow: number = row + pageSize;
         if (totalRows < nexstartRow) {
           this.state.searchPartRes.forEach(result => {
             _results.push({
@@ -181,8 +159,8 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
           .rowLimit(pageSize);
       sp.search(q).then((data) => {
         this.setState(prevState => ({ searchPartRes: prevState.searchPartRes.concat(data.PrimarySearchResults) }));
-        let totalRows = data.TotalRows;
-        let nexstartRow = row + pageSize;
+        let totalRows: number = data.TotalRows;
+        let nexstartRow: number = row + pageSize;
         if (totalRows < nexstartRow) {
           this.state.searchPartRes.forEach(result => {
             _results.push({
@@ -215,12 +193,11 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
   }
 
   //data for exel export
-  public Listdata = () => {
+  public listdata = () => {
     let resultBilan: ISearchRes[] = [];
     let resultSuivi: ISearchRes[] = [];
     let resultMision: ISearchRes[] = [];
     this.state.totalSearchBilan.forEach(element => {
-
       resultBilan.push({
         listName: this.decoderCType(element['listName']),
         fieldName: this.decoderField(element['fieldName']),
@@ -254,10 +231,10 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
       return resultItems.map(o1 => {
         return resultMission.some(o2 => {
           if (o2.NumMission) {
-            var re = /-/gi;
-            var NumMission = o2.NumMission.replace(re, "");
-            let url = o1.SPWebUrl.split('/');
-            let num = url.pop() || url.pop();
+            var re: RegExp = /-/gi;
+            var NumMission: string = o2.NumMission.replace(re, "");
+            let url: string[] = o1.SPWebUrl.split('/');
+            let num: string = url.pop() || url.pop();
             if (NumMission === num) {
               resultItems.push({
                 listName: o1['listName'],
@@ -278,17 +255,17 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     };
     getRelative(resultMision, resultBilan);
     getRelative(resultMision, resultSuivi);
-    saveExcel(resultBilan, resultSuivi, resultMision);
+    SaveExcel(resultBilan, resultSuivi, resultMision);
   }
 
   //mapping Bilan_de_mission with Suivi_de_relecture_par_relecteur
   private hasBlanMission = (searchResults: ISearchRes[], serchSuinvi: ISearchRes[]): ISearchRes[] => {
     return serchSuinvi.filter(o1 => {
       return searchResults.some(o2 => {
-        let urlSuivni = o1.SPWebUrl.split('/');
-        let urlBilan = o2.SPWebUrl.split('/');
-        let numSuivni = urlSuivni.pop() || urlSuivni.pop();
-        let numBilan = urlBilan.pop() || urlBilan.pop();
+        let urlSuivni: string[] = o1.SPWebUrl.split('/');
+        let urlBilan: string[] = o2.SPWebUrl.split('/');
+        let numSuivni: string = urlSuivni.pop() || urlSuivni.pop();
+        let numBilan: string = urlBilan.pop() || urlBilan.pop();
         return numSuivni === numBilan; // return the ones with equal id
       });
     });
@@ -300,7 +277,7 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
       maxDate: '',
       minDate: ''
     };
-    var minIdx = 0, maxIdx = 0;
+    var minIdx: number = 0, maxIdx: number = 0;
     for (var i = 0; i < searchResults.length; i++) {
       if (searchResults[i][dField] > searchResults[maxIdx][dField]) maxIdx = i;
       if (searchResults[i][dField] < searchResults[minIdx][dField]) minIdx = i;
@@ -312,10 +289,10 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
 
   //get Percent for Bilan_de_mission and Suivi_de_relecture_par_relecteur
   private getPercent = (searchResults: ISearchRes[]) => {
-    let countYes = 0;
-    let countNo = 0;
-    let listName;
-    let fieldName;
+    let countYes: number = 0;
+    let countNo: number = 0;
+    let listName: string;
+    let fieldName: string;
     searchResults.forEach(element => {
       listName = element.listName;
       fieldName = element.fieldName;
@@ -345,11 +322,11 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     return searchMission.filter(o1 => {
       return searchResults.some(o2 => {
         if (o1.NumMission) {
-          var re = /-/gi;
-          var NumMission = o1.NumMission.replace(re, "");
-          let urlBilan = o2.SPWebUrl.split('/');
-          let numBilan = urlBilan.pop() || urlBilan.pop();
-          return NumMission === numBilan; // return the ones with equal id  
+          let re: RegExp = /-/gi;
+          let numMission: string = o1.NumMission.replace(re, "");
+          let urlBilan: string[] = o2.SPWebUrl.split('/');
+          let numBilan: string = urlBilan.pop() || urlBilan.pop();
+          return numMission === numBilan; // return the ones with equal id  
         }
       });
     });
@@ -357,18 +334,18 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
 
   //get Percent for Missions with Bilan_de_mission
   private getPercentMission = (searchResults: ISearchRes[], searchMission: ISearchRes[]) => {
-    let listName;
-    let fieldName;
-    let result = searchMission.filter(o1 => {
+    let listName: string;
+    let fieldName: string;
+    let result: ISearchRes[] = searchMission.filter(o1 => {
       listName = o1.listName;
       fieldName = o1.fieldName;
       return searchResults.some(o2 => {
         if (o1.NumMission) {
-          var re = /-/gi;
-          var NumMission = o1.NumMission.replace(re, "");
-          let urlBilan = o2.SPWebUrl.split('/');
-          let numBilan = urlBilan.pop() || urlBilan.pop();
-          return NumMission === numBilan; // return the ones with equal id  
+          let re: RegExp = /-/gi;
+          let numMission: string = o1.NumMission.replace(re, "");
+          let urlBilan: string[] = o2.SPWebUrl.split('/');
+          let numBilan: string = urlBilan.pop() || urlBilan.pop();
+          return numMission === numBilan; // return the ones with equal id  
         }
       });
     });
@@ -389,37 +366,37 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
         <Stack horizontal>
           <DatePicker
             style={{ marginRight: '15px' }}
-            label="Start Date"
-            key={"dStart"}
+            label={strings.startDateLabel}
+            key={strings.dStart}
             value={this.state.startDate}
-            placeholder="Select start date..."
+            placeholder={strings.startDatePlaceholder}
             isMonthPickerVisible={false}
             onSelectDate={date => this.setState({ startDate: date })}
             strings={defaultDatePickerStrings}
           />
           <DatePicker
-            label="End Date"
-            key={"dEnd"}
+            label={strings.endDateLabel}
+            key={strings.dStart}
             value={this.state.endDate}
-            placeholder="Select end date..."
+            placeholder={strings.endDatePlaceholder}
             onSelectDate={date => this.setState({ endDate: date })}
             isMonthPickerVisible={false}
             strings={defaultDatePickerStrings}
           />
         </Stack>
         <DefaultButton id="Exel"
-          onClick={this.Listdata}
-          text="Export Exel"
+          onClick={this.listdata}
+          text={strings.exportExel}
           allowDisabledFocus
           style={{ marginRight: '27px' }} />
-        <DefaultButton id="Refresh" onClick={this.GetData} text="Refresh data" allowDisabledFocus />
+        <DefaultButton id="refresh" onClick={this.getData} text={strings.refreshData} allowDisabledFocus />
         <div className={styles.row}>
           {this.state.sortedResult.map((val) => {
             return (
               <ChartControl
                 type={ChartType.Bar}
                 data={{
-                  labels: [`yes- ${val.countYes}%`, `no - ${val.countNo}%`],
+                  labels: [`${strings.lableYes}${val.countYes}%`, `${strings.lableNo}${val.countNo}%`],
                   datasets: [{
                     label: `${this.decoderCType(val.listId)} - ${this.decoderField(val.fieldId)}`,
                     data: [val.countYes, val.countNo, 0]
@@ -437,15 +414,15 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     let cType: string;
     switch (id) {
       case "0x010030F4365A045058449B6D5A1086834EB3007DA7964A5C6CE1479A322590C25A1CA5": {
-        cType = "Mission";
+        cType = strings.mission;
         break;
       }
       case "0x01002229A785DC4FB442A6ABC3C478C38232*": {
-        cType = "Suivi_de_relecture_par_relecteur";
+        cType =  strings.suivi_de_relecture_par_relecteur;
         break;
       }
       case "0x0100E297556C5DCE1F428F2CCB8A9A2609F6*": {
-        cType = "Bilan_de_mission";
+        cType = strings.bilan_de_mission;
         break;
       }
       default: {
@@ -460,27 +437,27 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     let fName: string;
     switch (field) {
       case "Recommandations": {
-        fName = "Recommandations (rapport)";
+        fName = strings.recommandations;
         break;
       }
       case "ReunionCadrageAvecDirection": {
-        fName = "Réunion de cadrage avec la Direction";
+        fName = strings.reunionCadrageAvecDirection;
         break;
       }
       case "ReunionPreparPleniereDirection": {
-        fName = "Réunion préparatoire ou échanges avant la plénière avec la Direction";
+        fName = strings.reunionPreparPleniereDirection;
         break;
       }
       case "RecueilSatisfactionCse": {
-        fName = "Recueil formalisé de la satisfaction des élus du CSE";
+        fName = strings.recueilSatisfactionCse;
         break;
       }
       case "PvCseRestitution": {
-        fName = "PV du CSE de restitution récupéré et mis dans l’ETCC";
+        fName = strings.pvCseRestitution;
         break;
       }
       case field = "Sortie": {
-        fName = "Sortie de rapport";
+        fName = strings.sortie;
         break;
       }
       default: {
@@ -491,3 +468,28 @@ export default class SecafiIndicateursEtcc extends React.Component<ISecafiIndica
     return fName;
   }
 }
+
+let SaveExcel = (listData, list1?, list2?) => {
+  let fileType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8';
+  let fileExtension = '.xlsx';
+  let heading1 = [["List name", "Field Name", "Field Value", "Année", "Produit", "Num mission", "Equipe", "Client", "Sortie de rapport"], []];
+
+  if (listData.length > 0) {
+    let ws = XLSX.utils.book_new();
+    XLSX.utils.sheet_add_aoa(ws, heading1);
+    XLSX.utils.sheet_add_json(ws, listData, { origin: 'A2', skipHeader: true });
+    const wb = { Sheets: { 'Bilan_de_mission': ws }, SheetNames: ['Bilan_de_mission'] };
+    if (list1.length > 0) {
+      let ws1 = XLSX.utils.json_to_sheet(list1);
+      XLSX.utils.sheet_add_aoa(ws1, heading1);
+      XLSX.utils.book_append_sheet(wb, ws1, "Suivi_de_relecture");
+    }
+    if (list2.length > 0) {
+      let ws1 = XLSX.utils.json_to_sheet(list2);
+      XLSX.utils.book_append_sheet(wb, ws1, "Missions");
+    }
+    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], { type: fileType });
+    saveAs(data, 'Data' + fileExtension);
+  }
+};

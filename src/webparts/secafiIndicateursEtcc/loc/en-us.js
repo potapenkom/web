@@ -1,11 +1,30 @@
-define([], function() {
+define([], function () {
   return {
     "PropertyPaneDescription": "Description Secafi_indicateurs_ETCC",
     "BasicGroupName": "Group Name",
     "DescriptionFieldLabel": "Description Field",
-    "fieldId":"fieldId",
-    "fieldTitle":"Field internal name",
-    "listId":"listId",
-    "listTitle":"Content type GUID"
+    "fieldId": "fieldId",
+    "fieldTitle": "Field internal name",
+    "listId": "listId",
+    "listTitle": "Content type GUID",
+    "startDateLabel": "Start Date",
+    "startDatePlaceholder": "Select start date...",
+    "endDateLabel": "End Date",
+    "endDatePlaceholder": "Select end date...",
+    "dStart": "dStart",
+    "dEnd": "dEnd",
+    "exportExel": "Export Exel",
+    "refreshData":"Refresh data",
+    "lableYes":"yes- ",
+    "lableNo":"no- ",
+    "mission":"Mission",
+    "suivi_de_relecture_par_relecteur":"Suivi_de_relecture_par_relecteur",
+    "bilan_de_mission":"Bilan_de_mission",
+    "recommandations": "Recommandations (rapport)",
+    "reunionCadrageAvecDirection":"Réunion de cadrage avec la Direction",
+    "reunionPreparPleniereDirection":"Réunion préparatoire ou échanges avant la plénière avec la Direction",
+    "recueilSatisfactionCse":"Recueil formalisé de la satisfaction des élus du CSE",
+    "pvCseRestitution":"PV du CSE de restitution récupéré et mis dans l’ETCC",
+    "sortie":"Sortie de rapport",
   }
 });
